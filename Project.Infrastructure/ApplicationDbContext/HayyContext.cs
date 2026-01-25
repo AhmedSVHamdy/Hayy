@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Project.Core.Domain.Entities;
 using System;
 using System.Collections.Generic;
 
@@ -17,8 +18,8 @@ public partial class HayyContext : DbContext
     {
     }
 
+    public DbSet<User> Users { get; set; }
 
-    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
        
