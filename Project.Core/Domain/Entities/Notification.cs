@@ -12,6 +12,7 @@ namespace Project.Core.Domain.Entities
         public ReferenceType ReferenceType { get; set; }
         public Guid? ReferenceId { get; set; }
         public string? Payload { get; set; }
+        public string? GroupKey { get; set; }
         public bool IsRead { get; set; }
         public DateTime CreatedAt { get; set; }
 

@@ -7,15 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Domain\RopositoryContracts\" />
     <Folder Include="Exceptions\" />
     <Folder Include="Helpers\" />
     <Folder Include="Identity Entites\" />
-    <Folder Include="Mappers\" />
-    <Folder Include="ServiceContracts\" />
-    <Folder Include="Services\" />
     <Folder Include="Validators\" />
 	<FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="16.0.0" />
   </ItemGroup>
 
 </Project>
