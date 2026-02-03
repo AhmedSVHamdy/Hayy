@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.AspNetCore.Http;
 
-namespace Project.Core.Domain.Azureimges
+namespace Project.Core.ServiceContracts
 {
     public interface IImageService
     {
