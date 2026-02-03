@@ -10,23 +10,23 @@ using System.Reflection;
 
 namespace Project.Infrastructure.ApplicationDbContext;
 
-public partial class HayyContext : IdentityDbContext<User,ApplicationRole,Guid>
+public partial class HayyContext : IdentityDbContext<User, ApplicationRole, Guid>
 {
     public HayyContext()
     {
     }
 
-    public HayyContext(DbContextOptions<HayyContext> options): base(options)
+    public HayyContext(DbContextOptions<HayyContext> options) : base(options)
     {
 
     }
-protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         OnModelCreatingPartial(modelBuilder);
 
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
-   
+
 
     // Users & Settings
     public DbSet<User> Users { get; set; }
@@ -68,7 +68,7 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
     public DbSet<RecommendedItem> RecommendedItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }
 
-    
+
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
