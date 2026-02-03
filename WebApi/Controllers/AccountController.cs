@@ -7,12 +7,21 @@ using Project.Core.DTO;
 
 namespace WebApi.Controllers
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class AccountController : CustomController
     {
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="userManager"></param>
+        /// <param name="signInManager"></param>
+        /// <param name="roleManager"></param>
         public AccountController(UserManager<User> userManager, SignInManager<User> signInManager, RoleManager<ApplicationRole> roleManager)
         {
             _userManager = userManager;

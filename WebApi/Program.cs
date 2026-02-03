@@ -2,10 +2,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Project.Core;
-using Project.Core.Domain.Azureimges;
 using Project.Infrastructure;
 using Project.Infrastructure.ApplicationDbContext;
-using Project.Infrastructure.Services;
 using System.Configuration;
 using WebApi.Middlewares;
 
@@ -37,9 +35,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-// تسجيل خدمة الصور
-builder.Services.AddScoped<IImageService, ImageService>();
-
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields =
+    Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestProperties |
+    Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.ResponsePropertiesAndHeaders;
+});
 var app = builder.Build();
 
 

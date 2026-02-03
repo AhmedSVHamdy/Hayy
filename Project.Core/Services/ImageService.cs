@@ -2,7 +2,7 @@
 using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using Project.Core.Domain.Azureimges;
+using Project.Core.ServiceContracts;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -22,8 +22,7 @@ namespace Project.Core.Services
         {
             // 1. التحقق إن فيه ملف أصلاً
             if (file == null || file.Length == 0)
-                return null; // أو ممكن ترمي Exception حسب رغبتك
-
+                throw new ArgumentNullException();
             // 2. قراءة الكونكشن من الإعدادات
             var connectionString = _configuration["AzureStorage"];
 

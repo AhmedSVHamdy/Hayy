@@ -17,7 +17,7 @@ namespace Project.Infrastructure.Configurations.User_Domain
             builder.HasKey(X => X.Id);
 
             // 3. إعدادات الخصائص
-            builder.Property(X => X.Name)
+            builder.Property(X => X.FullName)
                    .IsRequired()
                    .HasMaxLength(100);
 
@@ -27,7 +27,7 @@ namespace Project.Infrastructure.Configurations.User_Domain
 
             builder.HasIndex(X => X.Email).IsUnique();
 
-            builder.Property(X => X.Password)
+            builder.Property(X => X.PasswordHash)
                    .IsRequired(); // تخزن هنا الـ Hash وليس الباسورد الصريح
 
             builder.Property(X => X.UserType)
