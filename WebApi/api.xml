@@ -9,6 +9,14 @@
             
             </summary>
         </member>
+        <member name="M:WebApi.Controllers.AccountController.#ctor(Microsoft.AspNetCore.Identity.UserManager{Project.Core.Domain.Entities.User},Microsoft.AspNetCore.Identity.SignInManager{Project.Core.Domain.Entities.User},Microsoft.AspNetCore.Identity.RoleManager{Project.Core.Domain.ApplicationRole})">
+            <summary>
+            
+            </summary>
+            <param name="userManager"></param>
+            <param name="signInManager"></param>
+            <param name="roleManager"></param>
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.

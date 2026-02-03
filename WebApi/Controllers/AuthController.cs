@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore; // عشان نستخدم EF Core
-using Project.Core.Domain.Azureimges; // عشان يشوف IImageService
+ // عشان يشوف IImageService
 using Project.Core.Domain.Entities; // عشان يشوف كلاس User (تأكد من المسار)
 using Project.Core.DTO;       // عشان يشوف RegisterDto
 using Project.Core.ServiceContracts;
@@ -70,28 +70,28 @@ namespace WebApi.Controllers
     //        return Ok(users);
     //    }
     }
-    public class NotificationsController : ControllerBase
-    {
-        private readonly INotificationService _notificationService;
+    //public class NotificationsController : ControllerBase
+    //{
+    //    private readonly INotificationService _notificationService;
 
-        public NotificationsController(INotificationService notificationService)
-        {
-            _notificationService = notificationService;
-        }
+    //    public NotificationsController(INotificationService notificationService)
+    //    {
+    //        _notificationService = notificationService;
+    //    }
 
-        [HttpPost]
-        public async Task<IActionResult> Create(NotificationAddRequest request)
-        {
-            var result = await _notificationService.CreateNotification(request);
-            return Ok(result);
-        }
+    //    [HttpPost]
+    //    public async Task<IActionResult> Create(NotificationAddRequest request)
+    //    {
+    //        var result = await _notificationService.CreateNotification(request);
+    //        return Ok(result);
+    //    }
 
-        [HttpGet("{userId}")]
-        public async Task<IActionResult> GetMyNotifications(Guid userId)
-        {
-            var result = await _notificationService.GetMyNotifications(userId);
-            return Ok(result);
-        }
-    }
+    //    [HttpGet("{userId}")]
+    //    public async Task<IActionResult> GetMyNotifications(Guid userId)
+    //    {
+    //        var result = await _notificationService.GetMyNotifications(userId);
+    //        return Ok(result);
+    //    }
+    //}
         
     }
