@@ -1,16 +1,14 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Project.Core.Enums;
 
 namespace Project.Core.Domain.Entities
 {
-    public class User
+    public class User : IdentityUser<Guid>
     {
-        public Guid Id { get; set; }
-        public string? Email { get; set; }
-        public string? Password { get; set; }
-        public string? Name { get; set; }
+        public string? FullName { get; set; }
         public string? ProfileImage { get; set; }
-        public UserType UserType { get; set; }
+        public string? UserType { get; set; }
         public string? City { get; set; }
         public bool IsVerified { get; set; }
         public DateTime CreatedAt { get; set; }

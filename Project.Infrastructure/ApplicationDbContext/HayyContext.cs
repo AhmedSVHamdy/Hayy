@@ -1,13 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Project.Core.Domain;
 using Project.Core.Domain.Entities;
 using System;
 using System.Collections.Generic;
 
 namespace Project.Infrastructure.ApplicationDbContext;
 
-public partial class HayyContext : DbContext
+public partial class HayyContext : IdentityDbContext<User,ApplicationRole,Guid>
 {
     public HayyContext()
     {

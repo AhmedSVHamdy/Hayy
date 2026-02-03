@@ -1,14 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Microsoft.AspNetCore.Mvc;
+using Project.Core.Enums;
 
 namespace Project.Core.DTO
 {
-    public class RegisterDto
+    public class RegisterDTO
     {
-        public string? Name { get; set; }
+        public string? FullName { get; set; }
+
+        [Remote(action: "IsEmailAlreadyRegisterd", controller: "Account", ErrorMessage = "Email is already in use")]
         public string? Email { get; set; }
         public string? Password { get; set; }
-        // أي بيانات تانية عاوز تاخدها من اليوزر غير الصورة
+        public string? ConfirmPassword { get; set; }
+
+        public string? City { get; set; }
+
     }
 }
+
+
+
+

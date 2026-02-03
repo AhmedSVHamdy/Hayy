@@ -1,6 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Project.Core.Domain;
+using Project.Core.Domain.Entities;
 using Project.Infrastructure.ApplicationDbContext;
 using System;
 using System.Collections.Generic;
@@ -17,7 +21,20 @@ namespace Project.Infrastructure
                 options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
             });
 
-            
+            services.AddIdentity<User, ApplicationRole>(options =>
+            {
+                options.Password.RequiredUniqueChars = 3;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequiredLength = 8;
+
+            })
+            .AddEntityFrameworkStores<HayyContext>()
+            .AddDefaultTokenProviders()
+            .AddUserStore<UserStore<User, ApplicationRole, HayyContext, Guid>>()
+            .AddRoleStore<RoleStore<ApplicationRole, HayyContext, Guid>>();
 
 
 
