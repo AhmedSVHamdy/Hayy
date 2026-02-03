@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Project.Core.Domain.Entities;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Project.Infrastructure.ApplicationDbContext;
 
@@ -13,10 +14,17 @@ public partial class HayyContext : DbContext
     {
     }
 
-    public HayyContext(DbContextOptions<HayyContext> options)
-        : base(options)
+    public HayyContext(DbContextOptions<HayyContext> options): base(options)
     {
+
     }
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        OnModelCreatingPartial(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+    }
+   
 
     // Users & Settings
     public DbSet<User> Users { get; set; }
@@ -58,10 +66,7 @@ public partial class HayyContext : DbContext
     public DbSet<RecommendedItem> RecommendedItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        OnModelCreatingPartial(modelBuilder);
-    }
+    
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
