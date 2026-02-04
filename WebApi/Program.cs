@@ -2,9 +2,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Project.Core;
+using Project.Core.Domain.RopositoryContracts;
 using Project.Infrastructure;
 using Project.Infrastructure.ApplicationDbContext;
 using Project.Infrastructure.SignalR;
+using Project.Infrastructure.Repositories;
 using System.Configuration;
 using WebApi.Middlewares;
 
@@ -27,6 +29,8 @@ builder.Services.AddCors(options =>
               .AllowCredentials(); // ⚠️ دي إلزامية مع SignalR
     });
 });
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
