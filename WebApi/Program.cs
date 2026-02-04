@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Project.Core;
+using Project.Core.Domain;
 using Project.Infrastructure;
 using Project.Infrastructure.ApplicationDbContext;
 using System.Configuration;
