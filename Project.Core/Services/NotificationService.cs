@@ -1,12 +1,10 @@
 ﻿using AutoMapper;
+using FluentValidation; 
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.Entities.NotificationPayload;
 using Project.Core.Domain.RopositoryContracts;
 using Project.Core.DTO;
 using Project.Core.ServiceContracts;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 
 namespace Project.Core.Services
@@ -15,25 +13,37 @@ namespace Project.Core.Services
     {
         private readonly INotificationRepository _repo;
         private readonly IMapper _mapper;
-        private readonly INotifier _notifier; // 1. ضفنا الكوبري بتاع SignalR
+        private readonly INotifier _notifier; // SignalR
+        private readonly IValidator<NotificationAddRequest> _validator; // 👈 الحقن هنا
 
         public NotificationService(
             INotificationRepository repo,
             IMapper mapper,
-            INotifier notifier) // 2. حقناه في الـ Constructor
+            INotifier notifier,
+            IValidator<NotificationAddRequest> validator) // بنستلم الفاليداتور
         {
             _repo = repo;
             _mapper = mapper;
             _notifier = notifier;
+            _validator = validator;
         }
 
+        // =========================================================
+        // 1. إنشاء إشعار (مع Validation + Grouping)
+        // =========================================================
         public async Task<NotificationResponse> CreateNotification(NotificationAddRequest request)
         {
-            Notification notification;
-            NotificationResponse response;
+            var validationResult = await _validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                // بنجمع الأخطاء ونرميها عشان الميدلوير يرجعها 400 Bad Request
+                var errorMsg = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage));
+                throw new ArgumentException(errorMsg);
+            }
 
-            // 3. هل فيه GroupKey؟ وهل فيه إشعار قديم لسه مقروش؟
+            Notification notification;
             Notification? existingNotification = null;
+
             if (!string.IsNullOrEmpty(request.GroupKey))
             {
                 existingNotification = await _repo.GetUnreadByGroupKeyAsync(request.UserId, request.GroupKey);
@@ -41,89 +51,111 @@ namespace Project.Core.Services
 
             if (existingNotification != null)
             {
-                // =================================================
-                //  SCENARIO A: UPDATE (تحديث إشعار موجود) 🔄
-                // =================================================
+                // --- A) حالة التحديث (Update Existing) ---
 
-                // أ) فك الـ Payload القديم عشان نعرف العدد
-                var dataHelper = existingNotification.Payload != null
+                // فك التشفير (Deserialize) عشان نحدث العداد
+                var dataHelper = !string.IsNullOrEmpty(existingNotification.Payload)
                     ? JsonSerializer.Deserialize<NotificationData>(existingNotification.Payload)
                     : new NotificationData();
 
-                // ب) حساب البيانات الجديدة
+                // تحديث العداد والأسماء
                 int newCount = (dataHelper?.ItemCount ?? 1) + 1;
-                string newActorName = request.Data?.UserName ?? "شخص ما"; // الاسم الجديد
+                string newActorName = request.Data?.UserName ?? "مستخدم";
 
-                // ج) تحديث الكلاس المساعد (NotificationData)
                 if (dataHelper != null)
                 {
                     dataHelper.ItemCount = newCount;
-                    dataHelper.UserName = newActorName; // تحديث الاسم لآخر واحد عمل أكشن
-                    dataHelper.UserImage = request.Data?.UserImage ?? dataHelper.UserImage; // تحديث الصورة
+                    dataHelper.UserName = newActorName;
+                    // لو جاي صورة جديدة خدها، لو لأ خلي القديمة
+                    if (!string.IsNullOrEmpty(request.Data?.UserImage))
+                        dataHelper.UserImage = request.Data.UserImage;
                 }
 
-                // د) تحديث بيانات الإشعار نفسه (Entity)
-                existingNotification.Message = $"{newActorName} و {newCount - 1} آخرون تفاعلوا مع منشورك";
-                existingNotification.Title = "تفاعل جديد 🔥";
-                existingNotification.CreatedAt = DateTime.UtcNow; // تجديد الوقت عشان يطلع فوق
+                // تحديث نصوص الإشعار
+                existingNotification.Title = request.Title; // تحديث العنوان بآخر حدث
+                existingNotification.Message = $"{newActorName} و {newCount - 1} آخرون تفاعلوا معك";
+                existingNotification.CreatedAt = DateTime.UtcNow; // رفعه للأحدث
+                existingNotification.IsRead = false; // نخليه غير مقروء تاني عشان ينبه اليوزر
+                existingNotification.Payload = JsonSerializer.Serialize(dataHelper); // حفظ الداتا الجديدة
 
-                // هـ) إعادة تغليف الـ Payload وحفظه
-                existingNotification.Payload = JsonSerializer.Serialize(dataHelper);
-
-                // و) حفظ التعديل في الداتابيز
                 await _repo.UpdateAsync(existingNotification);
-
-                // ز) نعتمد المتغير ده عشان نرجعه
                 notification = existingNotification;
             }
             else
             {
-                // =================================================
-                //  SCENARIO B: CREATE (إنشاء إشعار جديد) 🆕
-                // =================================================
+                // --- B) حالة الإنشاء الجديد (Create New) ---
 
-                notification = _mapper.Map<Notification>(request);
-
-                // تظبيط العدد المبدئي بـ 1
+                // نضبط العداد بـ 1 قبل المابينج
                 if (request.Data != null) request.Data.ItemCount = 1;
 
-                // المابر بيحول الـ Data لـ JSON String أوتوماتيك هنا حسب إعدادات الـ Profile
-                // بس لو المابر مش مظبوط، ممكن نأكد عليه يدوياً:
-                // notification.Payload = JsonSerializer.Serialize(request.Data);
+                notification = _mapper.Map<Notification>(request);
+                // المابر هنا هيقوم بالواجب ويحول الـ Data لـ JSON String أوتوماتيك (حسب الـ Profile اللي عملناه)
 
+                notification.CreatedAt = DateTime.UtcNow;
                 await _repo.AddAsync(notification);
             }
 
-            // 4. تحويل الـ Entity لـ Response
-            response = _mapper.Map<NotificationResponse>(notification);
+            // 🛑 3. التحويل والرد (Response)
+            var response = _mapper.Map<NotificationResponse>(notification);
 
-            // 5. إرسال Real-Time Notification (SignalR) 📡
-            // بنحطها في Try-Catch عشان لو السيرفر فيه مشكلة في الاتصال، العملية الأصلية متقفش
+            // 🛑 4. إرسال Real-Time (SignalR) 📡
             try
             {
                 await _notifier.SendToUserAsync(request.UserId, response);
             }
-            catch
+            catch (Exception)
             {
-                // ممكن تعمل Log هنا (Console.WriteLine("SignalR Failed"))
+                // بنعمل Catch عشان لو السوكيت واقع، الداتابيز متتأثرش وتكمل عادي
             }
 
             return response;
         }
 
-        public async Task<List<NotificationResponse>> GetMyNotifications(Guid userId)
+        // =========================================================
+        // 2. جلب إشعارات المستخدم
+        // =========================================================
+        public async Task<List<NotificationResponse>> GetUserNotifications(Guid userId)
         {
-            var notifications = await _repo.GetUserNotificationsAsync(userId);
+            var notifications = await _repo.GetByUserIdAsync(userId);
             return _mapper.Map<List<NotificationResponse>>(notifications);
         }
 
-        public async Task<bool> MarkNotificationAsRead(Guid notificationId)
+        // =========================================================
+        // 3. قراءة إشعار واحد
+        // =========================================================
+        public async Task MarkAsReadAsync(Guid notificationId)
         {
             var notification = await _repo.GetByIdAsync(notificationId);
-            if (notification == null) return false;
+            if (notification != null && !notification.IsRead)
+            {
+                notification.IsRead = true;
+                await _repo.UpdateAsync(notification);
+            }
+        }
 
-            await _repo.MarkAsReadAsync(notification);
-            return true;
+        // =========================================================
+        // 4. قراءة كل الإشعارات
+        // =========================================================
+        public async Task MarkAllAsReadAsync(Guid userId)
+        {
+            var unreadNotifications = await _repo.GetUnreadByUserIdAsync(userId);
+
+            if (unreadNotifications != null && unreadNotifications.Any())
+            {
+                foreach (var note in unreadNotifications)
+                {
+                    note.IsRead = true;
+                }
+                await _repo.UpdateRangeAsync(unreadNotifications);
+            }
+        }
+
+        // =========================================================
+        // 5. عداد الإشعارات غير المقروءة
+        // =========================================================
+        public async Task<int> GetUnreadCountAsync(Guid userId)
+        {
+            return await _repo.CountUnreadAsync(userId);
         }
     }
 }

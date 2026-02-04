@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Project.Core.Mappers
 {
@@ -14,20 +13,19 @@ namespace Project.Core.Mappers
     {
         public NotificationProfile()
         {
-            // 1. من Request (DTO) -> Entity
+            // 1. من Request لـ Entity (وانت بتحفظ)
             CreateMap<NotificationAddRequest, Notification>()
-                .ForMember(dest => dest.IsRead, opt => opt.MapFrom(src => false))
-                // التريكاية هنا: خد الـ Data وحولها لـ String JSON 👇
                 .ForMember(dest => dest.Payload, opt => opt.MapFrom(src =>
-                    src.Data != null ? JsonSerializer.Serialize(src.Data, (JsonSerializerOptions?)null) : null));
+                    src.Data != null ? JsonSerializer.Serialize(src.Data, (JsonSerializerOptions?)null) : null)) // حول الـ Object لـ String
+                .ForMember(dest => dest.Message, opt => opt.MapFrom(src => src.Message)); // لو الأسماء مختلفة
 
-            // 2. من Entity -> Response (DTO)
+            // 2. من Entity لـ Response (وانت بتعرض)
             CreateMap<Notification, NotificationResponse>()
-                // التريكاية هنا: خد الـ Payload (String) وحوله لـ Object 👇
+                .ForMember(dest => dest.Message, opt => opt.MapFrom(src => src.Message)) // لو سميتها Body في الـ Response
                 .ForMember(dest => dest.Data, opt => opt.MapFrom(src =>
-                    string.IsNullOrEmpty(src.Payload)
-                    ? null
-                    : JsonSerializer.Deserialize<NotificationData>(src.Payload, (JsonSerializerOptions?)null)));
+                    !string.IsNullOrEmpty(src.Payload)
+                    ? JsonSerializer.Deserialize<NotificationData>(src.Payload, (JsonSerializerOptions?)null)
+                    : null)); // حول الـ String لـ Object
         }
     }
 }

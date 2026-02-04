@@ -249,6 +249,17 @@
             Helper method to format FluentValidation errors
             </summary>
         </member>
+        <member name="T:WebApi.Controllers.NotificationsController">
+            <summary>
+            Represents an API controller for managing user notifications, including creating new notifications, retrieving
+            notifications for the current user, and marking notifications as read.
+            </summary>
+            <remarks>All endpoints in this controller require the caller to be authenticated. The controller is
+            intended for use by authorized users only, and some actions (such as creating notifications) are typically
+            performed by administrators or system processes. The current user's identity is determined from the
+            authentication token rather than from request parameters, enhancing security by preventing spoofing of user
+            IDs.</remarks>
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.

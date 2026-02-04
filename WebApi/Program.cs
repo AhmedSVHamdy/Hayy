@@ -12,9 +12,11 @@ using Project.Core.Domain.Entities;
 using Project.Core.Domain.RopositoryContracts;
 using Project.Infrastructure;
 using Project.Infrastructure.ApplicationDbContext;
+using Project.Infrastructure.SignalR;
 using Project.Infrastructure.Repositories;
 using System.Configuration;
 using WebApi.Middlewares;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,6 +43,8 @@ builder.Services.AddSwaggerGen(options =>
 // Infrastructure and Core 
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddCoreServices(builder.Configuration);
+builder.Services.AddSignalR();
+
 
 
 // CORS
@@ -118,10 +122,13 @@ if (app.Environment.IsDevelopment())
 app.UseHsts();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseCors("AllowClient");// 3. تفعيل الـ CORS
 app.UseRouting();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+// 👇 السطر ده هو اللي بيفتح قناة الاتصال للفرونت إند
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.MapControllers();
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Project.Core.Domain.RopositoryContracts;
 using Project.Core.DTO;
+using Project.Core.Mappers;
 using Project.Core.ServiceContracts;
 using Project.Core.Services;
 using Project.Core.Validators;
@@ -32,6 +33,16 @@ namespace Project.Core
             // 2. تسجيل الخدمة
             services.AddTransient<IEmailService, EmailService>();
 
+
+            // 1. تسجيل AutoMapper
+            services.AddAutoMapper(cfg => { }, typeof(NotificationProfile).Assembly);
+
+            // 2. تسجيل Validators (عرفناهم بس)
+            services.AddValidatorsFromAssemblyContaining<NotificationAddRequestValidator>();
+
+            // 3. تسجيل Services (البيزنس لوجيك)
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IBusinessService, BusinessService>();
 
 
 
