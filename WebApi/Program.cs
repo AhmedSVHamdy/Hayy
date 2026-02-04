@@ -1,17 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;    
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Project.Core;
-using Project.Core.Domain;
-using Project.Core.Domain.Entities;
 using Project.Infrastructure;
 using Project.Infrastructure.ApplicationDbContext;
-using Project.Infrastructure.Configurations;
 using System.Configuration;
 using WebApi.Middlewares;
 
@@ -27,6 +24,8 @@ builder.Services.AddControllers(options =>
     options.Filters.Add(new AuthorizeFilter(policy));
 
 });
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
