@@ -8,8 +8,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Project.Core;
 using Project.Core.Domain;
+using Project.Core.Domain.Entities;
+using Project.Core.Domain.RopositoryContracts;
 using Project.Infrastructure;
 using Project.Infrastructure.ApplicationDbContext;
+using Project.Infrastructure.Repositories;
 using System.Configuration;
 using WebApi.Middlewares;
 
