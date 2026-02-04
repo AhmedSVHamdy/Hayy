@@ -7,20 +7,28 @@ namespace Project.Core.Domain.RopositoryContracts
 {
     public interface INotificationRepository
     {
-        // إضافة إشعار للداتابيز
-        Task<Notification> AddAsync(Notification notification);
+        // 1. الإضافة (Create)
+        Task AddAsync(Notification notification);
 
-        // يجيب كل إشعارات يوزر معين (الأحدث فالأقدم)
-        Task<List<Notification>> GetUserNotificationsAsync(Guid userId);
+        // 2. التعديل (Update) - دي بديلة لـ MarkAsRead
+        Task UpdateAsync(Notification notification);
 
-        // يجيب إشعار واحد بال ID
+        // 3. جلب عنصر واحد بالـ ID
         Task<Notification?> GetByIdAsync(Guid id);
 
-        // يعلم على الإشعار إنه اتقرأ
-        Task MarkAsReadAsync(Notification notification);
+        // 4. جلب كل إشعارات اليوزر (History)
+        Task<List<Notification>> GetByUserIdAsync(Guid userId);
 
+        // 5. جلب غير المقروء (للتجميع Grouping)
         Task<Notification?> GetUnreadByGroupKeyAsync(Guid userId, string groupKey);
 
-        Task UpdateAsync(Notification notification);
+        // 6. جلب غير المقروء (عشان زرار Mark All)
+        Task<List<Notification>> GetUnreadByUserIdAsync(Guid userId);
+
+        // 7. العداد (Counter)
+        Task<int> CountUnreadAsync(Guid userId);
+
+        // 8. تحديث مجموعة (عشان Mark All تبقى سريعة)
+        Task UpdateRangeAsync(IEnumerable<Notification> notifications);
     }
 }

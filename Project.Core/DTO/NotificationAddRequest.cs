@@ -8,8 +8,8 @@ namespace Project.Core.DTO
 {
     public class NotificationAddRequest
     {
-        [Required] public string Title { get; set; } = string.Empty;
-        [Required] public string Body { get; set; }  = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; }  = string.Empty;
         public string Type { get; set; } = "System";
         public Guid UserId { get; set; }
 

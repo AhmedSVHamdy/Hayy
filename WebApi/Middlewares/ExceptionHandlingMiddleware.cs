@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using System.Net;
 using System.Threading.Tasks;
 #pragma warning disable 1591
 namespace WebApi.Middlewares
@@ -14,16 +15,13 @@ namespace WebApi.Middlewares
         {
             _logger = logger;
             _next = next;
-
         }
-
 
         public async Task Invoke(HttpContext httpContext)
         {
             try
             {
                 await _next(httpContext);
-
             }
             catch (Exception ex)
             {
@@ -31,15 +29,28 @@ namespace WebApi.Middlewares
                 if (ex.InnerException is not null)
                 {
                     _logger.LogError($"{ex.InnerException.GetType().ToString()}: {ex.InnerException.Message}");
-
                 }
 
-                httpContext.Response.StatusCode = 500;
+                // 👇 التعديل هنا: تحديد الكود حسب نوع الخطأ
+                var statusCode = ex switch
+                {
+                    KeyNotFoundException => (int)HttpStatusCode.NotFound,       // 404 (مش موجود)
+                    UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized, // 401 (غير مسموح)
+                    ArgumentException => (int)HttpStatusCode.BadRequest,        // 400 (بيانات غلط)
+                    _ => (int)HttpStatusCode.InternalServerError                // 500 (أي حاجة تانية)
+                };
 
-                await httpContext.Response.WriteAsJsonAsync(new { Message = ex.Message, Type = ex.GetType().ToString() });
+                httpContext.Response.StatusCode = statusCode;
+                httpContext.Response.ContentType = "application/json"; // تأكيد نوع المحتوى
 
+                // بنرجع رسالة الخطأ
+                await httpContext.Response.WriteAsJsonAsync(new
+                {
+                    StatusCode = statusCode,
+                    Message = ex.Message,
+                    Type = ex.GetType().Name
+                });
             }
-
         }
     }
 
