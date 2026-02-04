@@ -2,8 +2,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Project.Core;
+using Project.Core.Domain.RopositoryContracts;
 using Project.Infrastructure;
 using Project.Infrastructure.ApplicationDbContext;
+using Project.Infrastructure.Repositories;
 using System.Configuration;
 using WebApi.Middlewares;
 
@@ -13,6 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();

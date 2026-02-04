@@ -7,7 +7,6 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Domain\RopositoryContracts\" />
     <Folder Include="Exceptions\" />
     <Folder Include="Helpers\" />
     <Folder Include="Identity Entites\" />
