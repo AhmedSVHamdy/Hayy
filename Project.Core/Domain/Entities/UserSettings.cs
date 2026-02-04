@@ -9,8 +9,8 @@ namespace Project.Core.Domain.Entities
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
-        public bool EmailNotifications { get; set; }
-        public bool NotificationsEnabled { get; set; }
+        public bool EmailNotifications { get; set; } = true;
+        public bool NotificationsEnabled { get; set; } = true;
 
         public User User { get; set; } = null!;
     }

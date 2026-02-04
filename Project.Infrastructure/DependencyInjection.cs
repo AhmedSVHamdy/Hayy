@@ -5,7 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
+using Project.Core.Domain.RopositoryContracts;
 using Project.Infrastructure.ApplicationDbContext;
+using Project.Infrastructure.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -37,7 +39,8 @@ namespace Project.Infrastructure
             .AddRoleStore<RoleStore<ApplicationRole, HayyContext, Guid>>();
 
 
-
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<IUserInterestRepository, UserInterestRepository>();
 
 
 

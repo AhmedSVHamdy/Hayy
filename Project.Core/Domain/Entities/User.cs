@@ -13,6 +13,10 @@ namespace Project.Core.Domain.Entities
         public bool IsVerified { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        public string? RefreshToken { get; set; }
+        public DateTime RefreshTokenExpirationDateTime { get; set; }
+
+
         public UserSettings? UserSettings { get; set; }
         public ICollection<Business> Businesses { get; set; } = new List<Business>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();

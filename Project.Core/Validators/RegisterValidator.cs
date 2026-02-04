@@ -34,7 +34,6 @@ namespace Project.Core.Validators
 
 
 
-
-    }
+}
     
 

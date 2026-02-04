@@ -1,7 +1,8 @@
 ﻿namespace Project.Core.Enums
 {
-        public enum UserType { 
-        User, Business ,Admin
+    public enum UserType
+    {
+        User, Business, Admin
     }
 
 

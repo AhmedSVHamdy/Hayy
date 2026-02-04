@@ -4,18 +4,250 @@
         <name>WebApi</name>
     </assembly>
     <members>
-        <member name="T:WebApi.Controllers.AccountController">
+        <member name="T:WebApi.Controllers.AppAuthController">
             <summary>
-            
+            Authentication controller for mobile app users
             </summary>
+            <remarks>
+            Handles user registration, login, email verification, password management, and token refresh for mobile application
+            </remarks>
         </member>
-        <member name="M:WebApi.Controllers.AccountController.#ctor(Microsoft.AspNetCore.Identity.UserManager{Project.Core.Domain.Entities.User},Microsoft.AspNetCore.Identity.SignInManager{Project.Core.Domain.Entities.User},Microsoft.AspNetCore.Identity.RoleManager{Project.Core.Domain.ApplicationRole})">
+        <member name="M:WebApi.Controllers.AppAuthController.Register(Project.Core.DTO.RegisterDTO,Microsoft.AspNetCore.Http.IFormFile)">
             <summary>
-            
+            Register a new mobile app user
             </summary>
-            <param name="userManager"></param>
-            <param name="signInManager"></param>
-            <param name="roleManager"></param>
+            <param name="registerDTO">User registration data including email, password, name, and city</param>
+            <param name="image">Optional profile image file</param>
+            <returns>Success message with user ID</returns>
+            <remarks>
+            Sample request:
+            
+                POST /api/app/auth/register
+                Content-Type: multipart/form-data
+                
+                {
+                    "fullName": "Ahmed Hassan",
+                    "email": "ahmed@example.com",
+                    "password": "SecurePass123!",
+                    "confirmPassword": "SecurePass123!",
+                    "city": "Cairo",
+                    "image": [binary file]
+                }
+            
+            After successful registration:
+            - A confirmation email will be sent to the provided email address
+            - User must verify email before being able to login
+            - User will be assigned the "User" role automatically
+            </remarks>
+            <response code="200">Registration successful, confirmation email sent</response>
+            <response code="400">Invalid data or email already exists</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:WebApi.Controllers.AppAuthController.Login(Project.Core.DTO.LoginDTO,FluentValidation.IValidator{Project.Core.DTO.LoginDTO})">
+            <summary>
+            Authenticate a mobile app user
+            </summary>
+            <param name="loginDTO">Login credentials (email and password)</param>
+            <param name="validator">FluentValidation validator for login data</param>
+            <returns>JWT access token and refresh token</returns>
+            <remarks>
+            Sample request:
+            
+                POST /api/app/auth/login
+                Content-Type: application/json
+                
+                {
+                    "email": "ahmed@example.com",
+                    "password": "SecurePass123!"
+                }
+            
+            Requirements:
+            - User must have verified their email address
+            - User must be of type "User" (not Business or Admin)
+            - Password must match the registered password
+            
+            Response includes:
+            - Access Token (JWT) - valid for 15 minutes
+            - Refresh Token - valid for 7 days
+            - User details (name, email)
+            - Token expiration times
+            </remarks>
+            <response code="200">Login successful, returns authentication tokens</response>
+            <response code="400">Invalid request data</response>
+            <response code="401">Invalid credentials or email not verified</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:WebApi.Controllers.AppAuthController.ChangePassword(Project.Core.DTO.ChangePasswordRequest,FluentValidation.IValidator{Project.Core.DTO.ChangePasswordRequest})">
+            <summary>
+            Change the password for the authenticated user
+            </summary>
+            <param name="request">Current password and new password</param>
+            <param name="validator">FluentValidation validator for password change</param>
+            <returns>Success message</returns>
+            <remarks>
+            Sample request:
+            
+                POST /api/app/auth/change-password
+                Authorization: Bearer {access_token}
+                Content-Type: application/json
+                
+                {
+                    "currentPassword": "OldPass123!",
+                    "newPassword": "NewSecurePass456!",
+                    "confirmNewPassword": "NewSecurePass456!"
+                }
+            
+            Password requirements:
+            - Minimum 6 characters
+            - New password must be different from current password
+            - Confirm password must match new password
+            
+            Security measures after successful password change:
+            - All refresh tokens are invalidated
+            - User must login again on all devices
+            - This prevents unauthorized access if password was compromised
+            </remarks>
+            <response code="200">Password changed successfully</response>
+            <response code="400">Invalid data or incorrect current password</response>
+            <response code="401">User not authenticated</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:WebApi.Controllers.AppAuthController.ForgotPassword(Project.Core.DTO.ForgotPasswordRequest,FluentValidation.IValidator{Project.Core.DTO.ForgotPasswordRequest})">
+            <summary>
+            Request a password reset token
+            </summary>
+            <param name="request">Email address of the account</param>
+            <param name="validator">FluentValidation validator for forgot password request</param>
+            <returns>Generic success message</returns>
+            <remarks>
+            Sample request:
+            
+                POST /api/app/auth/forgot-password
+                Content-Type: application/json
+                
+                {
+                    "email": "ahmed@example.com"
+                }
+            
+            Process:
+            1. System validates the email format
+            2. If email exists in system, a reset token is generated
+            3. Email with deep link is sent to user: Hayy://reset-password?email=...&amp;token=...
+            4. User clicks the link in mobile app
+            5. App calls the reset-password endpoint with the token
+            
+            Security notes:
+            - Same response is returned whether email exists or not (prevents email enumeration)
+            - Reset token expires after a certain period
+            - Token is single-use only
+            </remarks>
+            <response code="200">Reset instructions sent (if email exists)</response>
+            <response code="400">Invalid email format</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:WebApi.Controllers.AppAuthController.ResetPassword(Project.Core.DTO.ResetPasswordRequest,FluentValidation.IValidator{Project.Core.DTO.ResetPasswordRequest})">
+            <summary>
+            Reset password using a valid reset token
+            </summary>
+            <param name="request">Email, reset token, and new password</param>
+            <param name="validator">FluentValidation validator for reset password request</param>
+            <returns>Success message</returns>
+            <remarks>
+            Sample request:
+            
+                POST /api/app/auth/reset-password
+                Content-Type: application/json
+                
+                {
+                    "email": "ahmed@example.com",
+                    "token": "CfDJ8KzR3...",
+                    "newPassword": "NewSecurePass789!",
+                    "confirmPassword": "NewSecurePass789!"
+                }
+            
+            Requirements:
+            - Token must be valid and not expired
+            - Token must match the one sent via email
+            - New password must meet security requirements
+            
+            After successful password reset:
+            - All refresh tokens are invalidated
+            - User must login with the new password
+            - Reset token becomes invalid (single-use)
+            </remarks>
+            <response code="200">Password reset successful</response>
+            <response code="400">Invalid token, expired token, or validation errors</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:WebApi.Controllers.AppAuthController.ConfirmEmail(System.String,System.String)">
+            <summary>
+            Confirm user email address
+            </summary>
+            <param name="userId">User ID from the confirmation link</param>
+            <param name="token">Email confirmation token</param>
+            <returns>Success or error message</returns>
+            <remarks>
+            Sample request:
+            
+                GET /api/app/auth/confirm-email?userId=123e4567-e89b-12d3-a456-426614174000&amp;token=CfDJ8KzR3...
+            
+            This endpoint is typically called when:
+            - User clicks the confirmation link in their registration email
+            - Mobile app intercepts the deep link: Hayy://confirm-email?userId=...&amp;token=...
+            - App extracts parameters and calls this endpoint
+            
+            After successful confirmation:
+            - User's email is marked as verified
+            - User can now login to the application
+            - IsVerified and EmailConfirmed flags are set to true
+            
+            Token validity:
+            - Token is single-use only
+            - Token has an expiration time
+            - If token expired, user can request a new one via resend-confirmation-email
+            </remarks>
+            <response code="200">Email confirmed successfully</response>
+            <response code="400">Invalid or expired token</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:WebApi.Controllers.AppAuthController.ResendConfirmationEmail(Project.Core.DTO.ResendConfirmationRequest)">
+            <summary>
+            Resend email confirmation link
+            </summary>
+            <param name="request">Email address to resend confirmation to</param>
+            <returns>Success message</returns>
+            <remarks>
+            Sample request:
+            
+                POST /api/app/auth/resend-confirmation-email
+                Content-Type: application/json
+                
+                {
+                    "email": "ahmed@example.com"
+                }
+            
+            Use this endpoint when:
+            - User didn't receive the original confirmation email
+            - Original confirmation token has expired
+            - User accidentally deleted the confirmation email
+            
+            Validations:
+            - Email must exist in the system
+            - Account must not already be verified
+            
+            Process:
+            - New confirmation token is generated
+            - New email with deep link is sent
+            - Old token remains valid until expiration
+            </remarks>
+            <response code="200">Confirmation email sent successfully</response>
+            <response code="400">Email not found or already verified</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:WebApi.Controllers.AppAuthController.FormatValidationErrors(FluentValidation.Results.ValidationResult)">
+            <summary>
+            Helper method to format FluentValidation errors
+            </summary>
         </member>
         <member name="T:Program">
             <summary>

@@ -42,7 +42,7 @@ namespace Project.Infrastructure.Configuration
                 .IsRequired();
 
             builder.Property(X => X.ReviewedAt)
-                .IsRequired(false); // فاضي لو لسه مراجعش   
+                .IsRequired(); // فاضي لو لسه مراجعش   
 
 
             // Relationships Configuration

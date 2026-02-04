@@ -7,14 +7,10 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Domain\RopositoryContracts\" />
     <Folder Include="Exceptions\" />
     <Folder Include="Helpers\" />
     <Folder Include="Identity Entites\" />
     <Folder Include="Mappers\" />
-    <Folder Include="ServiceContracts\" />
-    <Folder Include="Services\" />
-    <Folder Include="Validators\" />
 	<FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
@@ -23,6 +19,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
   </ItemGroup>
 
 </Project>
