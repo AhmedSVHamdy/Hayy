@@ -13,7 +13,7 @@ namespace Project.Core.Domain.Entities
         public string? RejectionReason { get; set; }
         public Guid AdminId { get; set; }
         public DateTime SubmittedAt { get; set; }
-        public DateTime ReviewedAt { get; set; }
+        public DateTime? ReviewedAt { get; set; }
 
         public Business Business { get; set; } = null!;
         public Admin Admin { get; set; } = null!;
