@@ -27,8 +27,16 @@ namespace Project.Infrastructure
         {
             services.AddDbContext<HayyContext>(options =>
             {
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"),
+                sqlOptions => // 👈 ضيف السطر ده والي تحته
+                {
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,       // يحاول 5 مرات قبل ما ييأس
+                        maxRetryDelay: TimeSpan.FromSeconds(10), // يستنى 10 ثواني بين كل محاولة
+                        errorNumbersToAdd: null); // أرقام أخطاء SQL إضافية (اختياري)
+                });
             });
+
 
             services.AddIdentity<User, ApplicationRole>(options =>
             {
@@ -54,7 +62,7 @@ namespace Project.Infrastructure
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IUserInterestRepository, UserInterestRepository>();
 
-            
+
 
             return services;
         }
