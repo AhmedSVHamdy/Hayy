@@ -70,28 +70,5 @@ namespace WebApi.Controllers
     //        return Ok(users);
     //    }
     }
-    //public class NotificationsController : ControllerBase
-    //{
-    //    private readonly INotificationService _notificationService;
-
-    //    public NotificationsController(INotificationService notificationService)
-    //    {
-    //        _notificationService = notificationService;
-    //    }
-
-    //    [HttpPost]
-    //    public async Task<IActionResult> Create(NotificationAddRequest request)
-    //    {
-    //        var result = await _notificationService.CreateNotification(request);
-    //        return Ok(result);
-    //    }
-
-    //    [HttpGet("{userId}")]
-    //    public async Task<IActionResult> GetMyNotifications(Guid userId)
-    //    {
-    //        var result = await _notificationService.GetMyNotifications(userId);
-    //        return Ok(result);
-    //    }
-    //}
-        
+         
     }

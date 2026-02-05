@@ -17,46 +17,64 @@ namespace Project.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Notification> AddAsync(Notification notification)
+        // 1. تنفيذ الإضافة
+        public async Task AddAsync(Notification notification)
         {
             await _context.Notifications.AddAsync(notification);
             await _context.SaveChangesAsync();
-            return notification;
         }
 
-        public async Task<List<Notification>> GetUserNotificationsAsync(Guid userId)
+        // 2. تنفيذ التعديل (بيغطي الـ MarkAsRead والـ Update العادي)
+        public async Task UpdateAsync(Notification notification)
         {
-            return await _context.Notifications
-                .Where(n => n.UserId == userId) // تجاهل الممسوح
-                .OrderByDescending(n => n.CreatedAt) // الأحدث الأول
-                .ToListAsync();
-        }
-
-        public async Task<Notification?> GetByIdAsync(Guid id)
-        {
-            return await _context.Notifications
-                .FirstOrDefaultAsync(n => n.Id == id);
-        }
-
-        public async Task MarkAsReadAsync(Notification notification)
-        {
-            notification.IsRead = true;
             _context.Notifications.Update(notification);
             await _context.SaveChangesAsync();
         }
 
+        // 3. تنفيذ جلب عنصر واحد
+        public async Task<Notification?> GetByIdAsync(Guid id)
+        {
+            return await _context.Notifications.FindAsync(id);
+        }
+
+        // 4. تنفيذ جلب القائمة للمستخدم
+        public async Task<List<Notification>> GetByUserIdAsync(Guid userId)
+        {
+            return await _context.Notifications
+                .Where(n => n.UserId == userId)
+                .OrderByDescending(n => n.CreatedAt) // الأحدث فوق
+                .Take(50) // ليميت عشان الأداء
+                .ToListAsync();
+        }
+
+        // 5. تنفيذ البحث عن إشعار للتجميع
         public async Task<Notification?> GetUnreadByGroupKeyAsync(Guid userId, string groupKey)
         {
             return await _context.Notifications
-                .FirstOrDefaultAsync(n =>
-                    n.UserId == userId &&
-                    n.GroupKey == groupKey &&
-                    !n.IsRead);
+                .FirstOrDefaultAsync(n => n.UserId == userId
+                                       && n.GroupKey == groupKey
+                                       && !n.IsRead);
         }
 
-        public async Task UpdateAsync(Notification notification)
+        // 6. تنفيذ جلب غير المقروء فقط
+        public async Task<List<Notification>> GetUnreadByUserIdAsync(Guid userId)
         {
-            _context.Notifications.Update(notification);
+            return await _context.Notifications
+                .Where(n => n.UserId == userId && !n.IsRead)
+                .ToListAsync();
+        }
+
+        // 7. تنفيذ العداد
+        public async Task<int> CountUnreadAsync(Guid userId)
+        {
+            return await _context.Notifications
+                .CountAsync(n => n.UserId == userId && !n.IsRead);
+        }
+
+        // 8. تنفيذ التحديث الجماعي
+        public async Task UpdateRangeAsync(IEnumerable<Notification> notifications)
+        {
+            _context.Notifications.UpdateRange(notifications);
             await _context.SaveChangesAsync();
         }
     }

@@ -7,13 +7,20 @@ namespace Project.Core.ServiceContracts
 {
     public interface INotificationService
     {
-        // دالة إنشاء إشعار (دي اللي هنستخدمها لما حد يعمل ريفيو أو أوردر)
+        // 1. إنشاء إشعار جديد
         Task<NotificationResponse> CreateNotification(NotificationAddRequest request);
 
-        // دالة عرض إشعارات اليوزر
-        Task<List<NotificationResponse>> GetMyNotifications(Guid userId);
+        // 2. جلب إشعارات مستخدم معين
+        // (غيرت اسمها لـ GetUserNotifications عشان تبقى أوضح إنها بتاخد UserId)
+        Task<List<NotificationResponse>> GetUserNotifications(Guid userId);
 
-        // دالة "قراءة" الإشعار
-        Task<bool> MarkNotificationAsRead(Guid notificationId);
+        // 3. قراءة إشعار واحد (مسحت الدالة المكررة وخليت دي بس)
+        Task MarkAsReadAsync(Guid notificationId);
+
+        // 4. قراءة كل الإشعارات
+        Task MarkAllAsReadAsync(Guid userId);
+
+        // 5. عداد الإشعارات غير المقروءة
+        Task<int> GetUnreadCountAsync(Guid userId);
     }
 }
