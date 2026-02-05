@@ -104,18 +104,27 @@ namespace Project.Core.Services
             var encodedToken = Uri.EscapeDataString(token);
             var encodedUserId = Uri.EscapeDataString(user.Id.ToString());
 
-            // لينك التفعيل للموبايل
-            // Hayy://confirm-email?userId=...&token=...
-            var confirmLink = $"Hayy://confirm-email?userId={encodedUserId}&token={encodedToken}";
 
+            // ⚠️ هام: ده رابط السيرفر بتاعك (لو شغال لوكال حط اللوكال هوست، لو مرفوع حط الدومين)
+            // مثال لوكال: https://localhost:7001
+            // مثال مرفوع: https://api.hayy-app.com
+            string baseUrl = "https://localhost:7248";
+
+            // التعديل هنا: اللينك بقى HTTP عادي جداً
+            var confirmLink = $"{baseUrl}/api/app/auth/confirm-email-redirect?userId={encodedUserId}&token={encodedToken}";
             var message = $@"
-            <h3>Welcome to Hayy App!</h3>
-            <p>Please confirm your account by clicking the link below:</p>
-            <a href='{confirmLink}'>Confirm My Account</a>";
+    <div style='font-family: Arial, sans-serif; padding: 20px;'>
+        <h3>Welcome to Hayy App!</h3>
+        <p>Please confirm your account by clicking the button below:</p>
+        <a href='{confirmLink}' 
+           style='background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>
+           Confirm My Account
+        </a>
+        <p>If the button doesn't work, copy this link to your browser:</p>
+        <p>{confirmLink}</p>
+    </div>";
 
             await _emailService.SendEmailAsync(user.Email!, "Confirm your email", message);
-
-
 
             return user;
         }

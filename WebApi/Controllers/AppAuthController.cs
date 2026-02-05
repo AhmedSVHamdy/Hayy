@@ -22,8 +22,8 @@ namespace WebApi.Controllers
     /// <remarks>
     /// Handles user registration, login, email verification, password management, and token refresh for mobile application
     /// </remarks>
-    [Route("api/app/auth")]
-    [ApiController]
+    [Route("api/app/auth")] // 👈 لاحظ كلمة app هنا    [ApiController]
+    [AllowAnonymous]
     public class AppAuthController : ControllerBase
     {
         private readonly UserManager<User> _userManager;
@@ -107,6 +107,33 @@ namespace WebApi.Controllers
             }
         }
 
+
+        [HttpGet("confirm-email-redirect")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmEmailRedirect(string userId, string token)
+        {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+            {
+                return BadRequest("Invalid parameters");
+            }
+
+            // 1. 👈 الخطوة المضافة: نقوم بتفعيل الإيميل فعلياً هنا في السيرفر
+            var result = await _authService.ConfirmEmailAsync(userId, token);
+
+            // نحدد حالة العملية عشان نبعتها للموبايل يعرف يعرض رسالة نجاح ولا فشل
+            string status = result.Succeeded ? "success" : "error";
+
+            // 2. تجهيز البيانات للرابط
+            var encodedToken = Uri.EscapeDataString(token);
+            var encodedUserId = Uri.EscapeDataString(userId);
+
+            // 3. توجيه المستخدم للتطبيق مع حالة العملية
+            // Hayy://confirm-email?status=success&userId=...
+            var appDeepLink = $"Hayy://confirm-email?status={status}&userId={encodedUserId}";
+
+            return Redirect(appDeepLink);
+        }
+
         /// <summary>
         /// Authenticate a mobile app user
         /// </summary>
@@ -149,6 +176,11 @@ namespace WebApi.Controllers
             [FromBody] LoginDTO loginDTO,
             [FromServices] IValidator<LoginDTO> validator)
         {
+
+            if (loginDTO == null)
+            {
+                return BadRequest(new { Error = "Invalid client request. The request body is empty." });
+            }
             // 1. Fluent Validation Check
             var validationResult = await validator.ValidateAsync(loginDTO);
 
