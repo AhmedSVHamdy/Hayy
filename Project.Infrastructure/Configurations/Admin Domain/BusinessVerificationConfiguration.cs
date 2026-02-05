@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Project.Core.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Project.Infrastructure.Configuration
 {
@@ -14,47 +11,37 @@ namespace Project.Infrastructure.Configuration
             // Primary Key
             builder.HasKey(X => X.Id);
 
-            // Properties Configuration
+            // Properties
+            builder.Property(X => X.CommercialRegImage).IsRequired().HasMaxLength(500);
+            builder.Property(X => X.TaxCardImage).IsRequired().HasMaxLength(500);
+            builder.Property(X => X.IdentityCardImage).IsRequired().HasMaxLength(500);
 
-            builder.Property(X => X.CommercialRegImage)
-            .IsRequired()
-            .HasMaxLength(500); // تخزين مسار الصورة
-
-            builder.Property(X => X.TaxCardImage)
-                .IsRequired()
-                .HasMaxLength(500);
-
-            builder.Property(X => X.IdentityCardImage)
-                .IsRequired()
-                .HasMaxLength(500);
-
-            // تحويل الـ Enum الخاص بالحالة إلى نص عند التخزين
             builder.Property(X => X.Status)
                 .HasConversion<string>()
                 .HasMaxLength(20)
                 .IsRequired();
 
-            builder.Property(X => X.RejectionReason)
-                .HasMaxLength(1000)
-                .IsRequired(false); // فاضي لو اتقبل
+            builder.Property(X => X.RejectionReason).HasMaxLength(1000).IsRequired(false);
+            builder.Property(X => X.SubmittedAt).IsRequired();
 
-            builder.Property(X => X.SubmittedAt)
-                .IsRequired();
-
-            builder.Property(X => X.ReviewedAt)
-                .IsRequired(false); // فاضي لو لسه مراجعش   
-
+            // ⚠️ هام: جعلنا تاريخ المراجعة يقبل Null لأن الطلب الجديد لم يراجع بعد
+            builder.Property(X => X.ReviewedAt).IsRequired(false);
 
             // Relationships Configuration
+
+            // 1. علاقة الأدمن (One-to-Many)
+            // جعلنا العلاقة اختيارية (IsRequired(false)) لأن الطلب في البداية ليس له أدمن
             builder.HasOne(X => X.Admin)
                 .WithMany(A => A.BusinessVerifications)
                 .HasForeignKey(X => X.AdminId)
-                .OnDelete(DeleteBehavior.Cascade); // لو اتشال الادمن، كل الفيريفيكيشن بتاعته تتشال 
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
 
+            // 2. علاقة البيزنس (One-to-One) - 🔴 هنا كان الخطأ وتم إصلاحه
             builder.HasOne(X => X.Business)
-                   .WithMany()
-                   .HasForeignKey(X => X.BusinessId)
-                   .OnDelete(DeleteBehavior.Cascade); // لو اتشال البيزنس، كل الفيريفيكيشن بتاعته تتشال
+                   .WithOne(b => b.BusinessVerifications) // 👈 تم التغيير من WithMany إلى WithOne
+                   .HasForeignKey<BusinessVerification>(X => X.BusinessId) // Foreign Key في جدول الـ Verification
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
