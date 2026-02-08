@@ -48,10 +48,10 @@ namespace WebApi.Controllers
         public async Task<IActionResult> GetMyNotifications()
         {
             var claims = User.Claims.ToList();
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             if (userId == Guid.Empty) return Unauthorized();
 
-            var result = await _notificationService.GetUserNotifications(new Guid(userId!));
+            var result = await _notificationService.GetUserNotifications(userId!);
             return Ok(result);
         }
 

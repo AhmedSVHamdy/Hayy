@@ -20,7 +20,6 @@ namespace Project.Core
             services.AddHttpContextAccessor(); // 👈 نضعها في البداية للأمان
             services.AddAutoMapper(options =>
             {
-                options.CreateMap<Business, BusinessResponse>();
                 options.CreateMap<NotificationAddRequest, Notification>();
 
             });
