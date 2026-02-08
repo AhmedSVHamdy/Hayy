@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Project.Infrastructure.ApplicationDbContext;
 
@@ -11,9 +12,11 @@ using Project.Infrastructure.ApplicationDbContext;
 namespace Project.Infrastructure.Migrations
 {
     [DbContext(typeof(HayyContext))]
-    partial class HayyContextModelSnapshot : ModelSnapshot
+    [Migration("20260208204743_RemoveLogs")]
+    partial class RemoveLogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -64,7 +64,6 @@ public partial class HayyContext : IdentityDbContext<User, ApplicationRole, Guid
     public DbSet<PlaceTag> PlaceTags { get; set; }
 
     // AI & Recommendations
-    public DbSet<UserLog> UserLogs { get; set; }
     public DbSet<UserInterestProfile> UserInterestProfiles { get; set; }
     public DbSet<RecommendedItem> RecommendedItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }

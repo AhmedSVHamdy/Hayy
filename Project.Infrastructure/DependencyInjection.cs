@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver;
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RopositoryContracts;
@@ -37,6 +41,48 @@ namespace Project.Infrastructure
                 });
             });
 
+            
+            try
+            {
+                BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
+            }
+            catch (BsonSerializationException)
+            {
+                // لو متسجل قبل كده، كمل عادي
+            }
+
+            // 👇 3. بعد كده نعمل الـ Mapping (دلوقتي هو عارف إن الـ Guid عبارة عن String)
+            if (!BsonClassMap.IsClassMapRegistered(typeof(UserLog)))
+            {
+                BsonClassMap.RegisterClassMap<UserLog>(cm =>
+                {
+                    cm.AutoMap();
+                    cm.MapIdMember(c => c.Id);
+                    // مش محتاجين نعمل SetSerializer هنا تاني خلاص لأننا عملناه فوق Global
+                });
+            }
+
+            // 👇 4. باقي الكود زي ما هو (الاتصال بالداتا بيز)
+            services.AddSingleton<IMongoClient>(sp =>
+            {
+                // الحل اللي اتفقنا عليه عشان الـ Secrets
+                var connectionString = configuration["MongoConnection"] ?? configuration.GetConnectionString("MongoConnection");
+
+                if (string.IsNullOrEmpty(connectionString))
+                    throw new Exception("MongoConnection string is missing or empty.");
+
+                return new MongoClient(connectionString);
+            });
+
+            services.AddScoped<IMongoDatabase>(sp =>
+            {
+                var client = sp.GetRequiredService<IMongoClient>();
+                return client.GetDatabase("GraduationProjectDb");
+            });
+
+            services.AddScoped<IUserLogRepository, UserLogRepository>();
+
+
 
             services.AddIdentity<User, ApplicationRole>(options =>
             {
@@ -62,7 +108,10 @@ namespace Project.Infrastructure
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IUserInterestRepository, UserInterestRepository>();
 
+            services.AddAutoMapper(cfg => cfg.AddProfile<UserLogProfile>());
 
+            // 2. تفعيل FluentValidation
+            services.AddValidatorsFromAssemblyContaining<CreateUserLogValidator>();
 
             return services;
         }

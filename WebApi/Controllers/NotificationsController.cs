@@ -1,9 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using Project.Core.Domain.Entities;
 using Project.Core.DTO;
+using Project.Core.Helpers;
 using Project.Core.ServiceContracts;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text;
 
 namespace WebApi.Controllers
 {
@@ -18,8 +23,9 @@ namespace WebApi.Controllers
     /// IDs.</remarks>
     [Route("api/[controller]")]
     [ApiController]
+     
     [Authorize] // 🔐 مهم جداً: محدش يستخدم الكنترولر ده غير لما يكون مسجل دخول
-    public class NotificationsController : ControllerBase
+    public partial class NotificationsController : ControllerBase
     {
         private readonly INotificationService _notificationService;
 
@@ -31,7 +37,7 @@ namespace WebApi.Controllers
         // 1. 📤 إرسال إشعار جديد (للأدمن أو السيستم)
         [HttpPost]
         //[Authorize(Roles = "Admin")] يفضل تحط عليها قيد إن "الأدمن" بس هو اللي يقدر يندهها، عشان مش أي يوزر يبعت إشعارات ليوزر تاني بمزاجه.
-        public async Task<IActionResult> Create(NotificationAddRequest request)
+        public async Task<IActionResult> Create([FromForm] NotificationAddRequest request)
         {
             var result = await _notificationService.CreateNotification(request);
             return Ok(result);
@@ -41,7 +47,8 @@ namespace WebApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetMyNotifications()
         {
-            var userId = GetCurrentUserId();
+            var claims = User.Claims.ToList();
+            var userId = User.GetUserId();
             if (userId == Guid.Empty) return Unauthorized();
 
             var result = await _notificationService.GetUserNotifications(userId);
@@ -52,7 +59,7 @@ namespace WebApi.Controllers
         [HttpGet("unread-count")]
         public async Task<IActionResult> GetUnreadCount()
         {
-            var userId = GetCurrentUserId();
+            var userId = User.GetUserId();
             if (userId == Guid.Empty) return Unauthorized();
 
             var count = await _notificationService.GetUnreadCountAsync(userId);
@@ -71,25 +78,12 @@ namespace WebApi.Controllers
         [HttpPatch("read-all")]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            var userId = GetCurrentUserId();
+            var userId = User.GetUserId();
             if (userId == Guid.Empty) return Unauthorized();
 
             await _notificationService.MarkAllAsReadAsync(userId);
             return Ok(new { Message = "All notifications marked as read" });
         }
 
-        // 🛠️ دالة مساعدة لجلب الـ ID من التوكن (عشان منكررش الكود)
-        private Guid GetCurrentUserId()
-        {
-            // حاول يجيب الـ ID من الـ ClaimTypes القياسي أو الاسم اللي انت بتستخدمه "uid"
-            var idClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
-                          ?? User.Claims.FirstOrDefault(c => c.Type == "uid")?.Value;
-
-            if (Guid.TryParse(idClaim, out var userId))
-            {
-                return userId;
-            }
-            return Guid.Empty;
-        }
     }
 }

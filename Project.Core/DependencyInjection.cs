@@ -42,7 +42,6 @@ namespace Project.Core
 
             // 3. تسجيل Services (البيزنس لوجيك)
             services.AddScoped<INotificationService, NotificationService>();
-            services.AddScoped<IBusinessService, BusinessService>();
 
 
 
