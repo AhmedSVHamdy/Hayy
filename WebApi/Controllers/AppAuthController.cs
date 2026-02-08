@@ -22,8 +22,8 @@ namespace WebApi.Controllers
     /// <remarks>
     /// Handles user registration, login, email verification, password management, and token refresh for mobile application
     /// </remarks>
-    [Route("api/app/auth")] // 👈 لاحظ كلمة app هنا    [ApiController]
-    [AllowAnonymous]
+    [Route("api/app/auth")] // 👈 لاحظ كلمة app هنا
+    [ApiController]
     public class AppAuthController : ControllerBase
     {
         private readonly UserManager<User> _userManager;
@@ -92,7 +92,7 @@ namespace WebApi.Controllers
                 return Ok(new
                 {
                     Message = "Registration successful. Please check your email to verify your account.",
-                    UserId = registeredUser.Id 
+                    UserId = registeredUser.Id
                 });
             }
             catch (ArgumentException ex)
@@ -197,7 +197,7 @@ namespace WebApi.Controllers
 
             try
             {
-               
+
                 User user = await _authService.Login(loginDTO);
 
                 // أ) إنشاء التوكن والـ Refresh Token
@@ -248,7 +248,7 @@ namespace WebApi.Controllers
                 return BadRequest("Invalid refresh token");
             }
 
-            AuthenticationResponse authenticationResponse =await _jwtService.CreateJwtTokenAsync(user,"mobile");
+            AuthenticationResponse authenticationResponse = await _jwtService.CreateJwtTokenAsync(user, "mobile");
 
             user.RefreshToken = authenticationResponse.RefreshToken;
             user.RefreshTokenExpirationDateTime = authenticationResponse.RefreshTokenExpirationDateTime;
@@ -404,42 +404,84 @@ namespace WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> ForgotPassword(
-            [FromBody] ForgotPasswordRequest request,
-            [FromServices] IValidator<ForgotPasswordRequest> validator)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
-            // 1. Fluent Validation
-            var validationResult = await validator.ValidateAsync(request);
-
-            if (!validationResult.IsValid)
-            {
-                var modelStateDictionary = new ModelStateDictionary();
-                foreach (var failure in validationResult.Errors)
-                {
-                    modelStateDictionary.AddModelError(failure.PropertyName, failure.ErrorMessage);
-                }
-                return BadRequest(modelStateDictionary);
-            }
+            // تحقق بسيط
+            if (string.IsNullOrEmpty(request.Email)) return BadRequest("Email is required");
 
             try
             {
-                // 2. Call Service
-                // حتى لو رجع null (المستخدم مش موجود)، هنكمل عادي ونعرض الرسالة المموهة
+                // بننادي السيرفيس تطلع التوكن
                 var token = await _authService.GeneratePasswordResetTokenAsync(request.Email);
 
-                // ملحوظة للتطوير: حالياً التوكن معاك في المتغير token
-                // ممكن تطبعه في الـ Console أو ترجعه في الـ Response مؤقتاً عشان التست
-                // لكن في الـ Production المفروض مايرجعش في الـ Response أبداً
+                if (token == null)
+                {
+                    // لو الإيميل مش موجود، بنرجع رسالة عامة للأمان
+                    return Ok(new { Message = "If email exists, reset link sent." });
+                }
 
-                // return Ok(new { Token = token }); // 👈 استخدم ده بس وأنت بتجرب عشان تاخد التوكن
-
-                return Ok(new { Message = "If the email exists, a reset link has been sent to your email." });
+                // 🚨 ملحوظة هامة جداً:
+                // السطر ده عشان التيست بس (Dev Mode) عشان تاخد التوكن من الـ Postman
+                // لما تطلع Production لازم تمسح السطر ده وتعتمد على الإيميل بس
+                return Ok(new
+                {
+                    Message = "Check email (Token returned for testing only)",
+                    TestToken = token // 👈 خد ده واستخدمه في الخطوة الجاية
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Error = "An error occurred", Details = ex.Message });
+                return StatusCode(500, new { Error = ex.Message });
             }
         }
+
+
+
+
+
+        [HttpGet("reset-password-redirect")]
+        [AllowAnonymous] // عشان مش محتاج توكن وهو لسه بيعمل ريسيت
+        public IActionResult ResetPasswordRedirect(string email, string token)
+        {
+            // 1. ده اسم البروتوكول اللي تطبيق الموبايل (Flutter/React Native) بيسمع عليه
+            // تأكد إن الموبايل تيم مظبطينه على الاسم ده (مثلاً: hayy://)
+            var mobileDeepLink = $"hayy://reset-password?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
+
+            // 2. هنعرض صفحة HTML بسيطة وزرار عشان المتصفح يفتح التطبيق
+            // الطريقة دي أفضل من Redirect المباشر عشان المتصفحات أحيانا بتعمل Block للتحويل الأوتوماتيك
+            var htmlContent = $@"
+        <html>
+            <head>
+                <title>Reset Password</title>
+                <style>
+                    body {{ font-family: sans-serif; text-align: center; padding-top: 50px; }}
+                    .btn {{ background-color: #4CAF50; color: white; padding: 15px 32px; 
+                            text-align: center; text-decoration: none; display: inline-block; 
+                            font-size: 16px; border-radius: 8px; border: none; cursor: pointer; }}
+                </style>
+            </head>
+            <body>
+                <h2>Password Reset</h2>
+                <p>Click the button below to open the app and reset your password.</p>
+                <a href='{mobileDeepLink}' class='btn'>Open App to Reset Password</a>
+                
+                <script>
+                    // محاولة فتح التطبيق أوتوماتيكياً
+                    window.location.href = '{mobileDeepLink}';
+                </script>
+            </body>
+        </html>";
+
+            return Content(htmlContent, "text/html");
+        }
+
+
+
+
+
+
+
+
 
         /// <summary>
         /// Reset password using a valid reset token
@@ -478,36 +520,32 @@ namespace WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> ResetPassword(
-            [FromBody] ResetPasswordRequest request,
-            [FromServices] IValidator<ResetPasswordRequest> validator)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
-            var validationResult = await validator.ValidateAsync(request);
-            if (!validationResult.IsValid)
-            {
-                return BadRequest(FormatValidationErrors(validationResult));
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
-                // اللوجيك اتنقل للسيرفيس (شامل مسح الـ RefreshToken)
+                // بنبعت التوكن والباسورد الجديد للسيرفيس عشان تنفذ
                 var result = await _authService.ResetPasswordAsync(request);
 
-                if (!result.Succeeded)
+                if (result.Succeeded)
                 {
-                    // يفضل هنا برضه نرجع رسالة عامة لو الخطأ "Invalid Token" 
-                    // بس للتسهيل دلوقتي هنرجع الخطأ
-                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    return BadRequest(new { Error = errors });
+                    return Ok(new { Message = "Password has been reset successfully. Login now!" });
                 }
 
-                return Ok(new { Message = "Password has been reset successfully. You can login now." });
+                // لو في أخطاء (التوكن غلط أو منتهي)
+                return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Error = "An error occurred", Details = ex.Message });
+                return StatusCode(500, new { Error = ex.Message });
             }
         }
+
+
+
+
 
         /// <summary>
         /// Confirm user email address
@@ -626,6 +664,11 @@ namespace WebApi.Controllers
                 return StatusCode(500, new { Error = "An error occurred", Details = ex.Message });
             }
         }
+
+
+
+
+
 
         /// <summary>
         /// Helper method to format FluentValidation errors

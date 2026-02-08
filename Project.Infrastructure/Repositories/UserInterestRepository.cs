@@ -1,5 +1,5 @@
 ﻿using Project.Core.Domain.Entities;
-using Project.Core.Domain.RopositoryContracts;
+using Project.Core.Domain.RepositoryContracts;
 using Project.Infrastructure.ApplicationDbContext;
 using System;
 using System.Collections.Generic;

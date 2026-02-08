@@ -41,10 +41,11 @@ namespace WebApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetMyNotifications()
         {
-            var userId = GetCurrentUserId();
-            if (userId == Guid.Empty) return Unauthorized();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == String.Empty)
+                return Unauthorized();
 
-            var result = await _notificationService.GetUserNotifications(userId);
+            var result = await _notificationService.GetUserNotifications(new Guid(userId!));
             return Ok(result);
         }
 

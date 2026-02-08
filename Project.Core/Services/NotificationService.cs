@@ -2,7 +2,7 @@
 using FluentValidation; 
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.Entities.NotificationPayload;
-using Project.Core.Domain.RopositoryContracts;
+using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
 using Project.Core.ServiceContracts;
 using System.Text.Json;

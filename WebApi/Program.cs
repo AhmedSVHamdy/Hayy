@@ -9,11 +9,12 @@ using Microsoft.IdentityModel.Tokens;
 using Project.Core;
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
-using Project.Core.Domain.RopositoryContracts;
+using Project.Core.Domain.RepositoryContracts;
 using Project.Infrastructure;
 using Project.Infrastructure.ApplicationDbContext;
-using Project.Infrastructure.SignalR;
+using Project.Infrastructure.Configurations;
 using Project.Infrastructure.Repositories;
+using Project.Infrastructure.SignalR;
 using System.Configuration;
 using WebApi.Middlewares;
 
@@ -97,19 +98,25 @@ builder.Services.AddHttpLogging(options =>
 
 var app = builder.Build();
 
-// admin
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var userManager = services.GetRequiredService<UserManager<User>>();
-    var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
-    var config = services.GetRequiredService<IConfiguration>(); // هات الكونفيج
 
-    // مرر الكونفيج للدالة
-    //await DbInitializer.SeedAdminUser(userManager, roleManager, config);
+    try
+    {
+        var userManager = services.GetRequiredService<UserManager<User>>();
+        var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
+        var config = services.GetRequiredService<IConfiguration>();
+
+        // 👇 شيلنا الـ Comment من هنا
+        await DbInitializer.SeedAdminUser(userManager, roleManager, config);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
 }
-
-
 app.UseExceptionHandlingMiddleware();
 app.UseHttpLogging();
 

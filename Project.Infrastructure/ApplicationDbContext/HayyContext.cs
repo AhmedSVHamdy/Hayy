@@ -32,9 +32,7 @@ public partial class HayyContext : IdentityDbContext<User, ApplicationRole, Guid
     // Users & Settings
     public DbSet<User> Users { get; set; }
     public DbSet<UserSettings> UserSettings { get; set; }
-    public DbSet<Admin> Admins { get; set; }
     public DbSet<AdminAction> AdminActions { get; set; }
-
     // Business & Plans
     public DbSet<Business> Businesses { get; set; }
     public DbSet<BusinessPlan> BusinessPlans { get; set; }

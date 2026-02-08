@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Project.Infrastructure.ApplicationDbContext;
 
@@ -11,9 +12,11 @@ using Project.Infrastructure.ApplicationDbContext;
 namespace Project.Infrastructure.Migrations
 {
     [DbContext(typeof(HayyContext))]
-    partial class HayyContextModelSnapshot : ModelSnapshot
+    [Migration("20260208182257_AdminInBusinessVerification")]
+    partial class AdminInBusinessVerification
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -153,6 +156,40 @@ namespace Project.Infrastructure.Migrations
                     b.ToTable("AspNetRoles", (string)null);
                 });
 
+            modelBuilder.Entity("Project.Core.Domain.Entities.Admin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProfileImage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Admins");
+                });
+
             modelBuilder.Entity("Project.Core.Domain.Entities.AdminAction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -174,9 +211,8 @@ namespace Project.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<string>("TargetId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("TargetType")
                         .IsRequired()
@@ -414,7 +450,8 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("AdminId");
 
-                    b.HasIndex("BusinessId");
+                    b.HasIndex("BusinessId")
+                        .IsUnique();
 
                     b.ToTable("BusinessVerifications");
                 });
@@ -1342,7 +1379,7 @@ namespace Project.Infrastructure.Migrations
 
             modelBuilder.Entity("Project.Core.Domain.Entities.AdminAction", b =>
                 {
-                    b.HasOne("Project.Core.Domain.Entities.User", "Admin")
+                    b.HasOne("Project.Core.Domain.Entities.Admin", "Admin")
                         .WithMany()
                         .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1419,13 +1456,14 @@ namespace Project.Infrastructure.Migrations
 
             modelBuilder.Entity("Project.Core.Domain.Entities.BusinessVerification", b =>
                 {
-                    b.HasOne("Project.Core.Domain.Entities.User", "Admin")
-                        .WithMany()
-                        .HasForeignKey("AdminId");
+                    b.HasOne("Project.Core.Domain.Entities.Admin", "Admin")
+                        .WithMany("BusinessVerifications")
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Project.Core.Domain.Entities.Business", "Business")
-                        .WithMany("Verifications")
-                        .HasForeignKey("BusinessId")
+                        .WithOne("BusinessVerifications")
+                        .HasForeignKey("Project.Core.Domain.Entities.BusinessVerification", "BusinessId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1740,15 +1778,20 @@ namespace Project.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Project.Core.Domain.Entities.Admin", b =>
+                {
+                    b.Navigation("BusinessVerifications");
+                });
+
             modelBuilder.Entity("Project.Core.Domain.Entities.Business", b =>
                 {
                     b.Navigation("BusinessAnalytics");
 
                     b.Navigation("BusinessPlans");
 
-                    b.Navigation("Places");
+                    b.Navigation("BusinessVerifications");
 
-                    b.Navigation("Verifications");
+                    b.Navigation("Places");
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.BusinessPlan", b =>

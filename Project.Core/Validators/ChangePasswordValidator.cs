@@ -3,7 +3,7 @@ using Project.Core.DTO;
 
 namespace Project.Core.Validators
 {
-    public class ChangePasswordValidator : AbstractValidator<ChangePasswordRequest>
+    public partial class ChangePasswordValidator : AbstractValidator<ChangePasswordRequest>
     {
         public ChangePasswordValidator()
         {

@@ -1,6 +1,6 @@
 ﻿using Project.Core.Domain.Entities;
 
-namespace Project.Core.Domain.RopositoryContracts
+namespace Project.Core.Domain.RepositoryContracts
 {
     public interface IUserInterestRepository
     {

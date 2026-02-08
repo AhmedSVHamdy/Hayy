@@ -1,16 +1,14 @@
-﻿using FluentValidation;
+﻿using AutoMapper;
+using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Project.Core.Domain.RopositoryContracts;
+using Project.Core.Domain.Entities;
+using Project.Core.Domain.RepositoryContracts; // تأكد من الاسم الصحيح
 using Project.Core.DTO;
 using Project.Core.Mappers;
 using Project.Core.ServiceContracts;
 using Project.Core.Services;
 using Project.Core.Validators;
-using System;
-using System.Collections.Generic;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
 
 namespace Project.Core
 {
@@ -18,39 +16,35 @@ namespace Project.Core
     {
         public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddScoped<IImageService, ImageService>();
-            services.AddScoped<IInterestService, InterestService>();
+            // 1. تسجيل خدمات الـ System/Framework
+            services.AddHttpContextAccessor(); // 👈 نضعها في البداية للأمان
+            services.AddAutoMapper(options =>
+            {
+                options.CreateMap<Business, BusinessResponse>();
+                options.CreateMap<NotificationAddRequest, Notification>();
 
+            });
+            services.AddValidatorsFromAssemblyContaining<ChangePasswordValidator>();
+
+            // 2. إعدادات الإيميل
+            services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+            services.AddTransient<IEmailService, EmailService>();
+
+            // 3. تسجيل خدمات الـ Authentication
             services.AddTransient<IJwtService, JwtService>();
-
             services.AddScoped<IAuthWeb, AuthWeb>();
             services.AddScoped<IAuthUsers, AuthUsers>();
 
-            services.AddValidatorsFromAssemblyContaining<ChangePasswordValidator>();
-
-            services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
-
-            // 2. تسجيل الخدمة
-            services.AddTransient<IEmailService, EmailService>();
-
-
-            // 1. تسجيل AutoMapper
-            services.AddAutoMapper(cfg => { }, typeof(NotificationProfile).Assembly);
-
-            // 2. تسجيل Validators (عرفناهم بس)
-            services.AddValidatorsFromAssemblyContaining<NotificationAddRequestValidator>();
-
-            // 3. تسجيل Services (البيزنس لوجيك)
+            // 4. تسجيل باقي خدمات البيزنس
+            services.AddScoped<IImageService, ImageService>();
+            services.AddScoped<IInterestService, InterestService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IBusinessService, BusinessService>();
 
 
+            services.AddScoped<IAdminService, AdminService>();
 
             return services;
-
         }
-            
-        
-
     }
 }

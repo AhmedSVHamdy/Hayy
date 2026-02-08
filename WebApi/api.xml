@@ -4,6 +4,70 @@
         <name>WebApi</name>
     </assembly>
     <members>
+        <member name="T:Project.Web.Controllers.AdminController">
+            <summary>
+            Controller for administrative operations including dashboard statistics, audit logs, and business verification management.
+            </summary>
+            <remarks>
+            All endpoints in this controller require Admin role authorization.
+            </remarks>
+        </member>
+        <member name="M:Project.Web.Controllers.AdminController.#ctor(Project.Core.ServiceContracts.IAdminService,Project.Core.ServiceContracts.IBusinessService,FluentValidation.IValidator{Project.Core.DTO.ReviewBusinessDTO})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Project.Web.Controllers.AdminController"/> class.
+            </summary>
+            <param name="adminService">Service for handling admin-specific operations.</param>
+            <param name="businessService">Service for handling business-related operations.</param>
+            <param name="reviewValidator">Validator for business review operations.</param>
+        </member>
+        <member name="M:Project.Web.Controllers.AdminController.GetDashboardStats">
+            <summary>
+            Retrieves comprehensive dashboard statistics for the admin panel.
+            </summary>
+            <returns>
+            An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing dashboard statistics including metrics and counts.
+            </returns>
+            <response code="200">Returns the dashboard statistics successfully.</response>
+            <response code="401">Unauthorized - User is not authenticated or lacks Admin role.</response>
+        </member>
+        <member name="M:Project.Web.Controllers.AdminController.GetAuditLog">
+            <summary>
+            Retrieves the complete audit log of administrative actions.
+            </summary>
+            <returns>
+            An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the list of all audit log entries.
+            </returns>
+            <response code="200">Returns the audit log successfully.</response>
+            <response code="401">Unauthorized - User is not authenticated or lacks Admin role.</response>
+        </member>
+        <member name="M:Project.Web.Controllers.AdminController.GetPendingVerifications">
+            <summary>
+            Retrieves all businesses that are pending verification.
+            </summary>
+            <returns>
+            An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the list of businesses awaiting admin review.
+            </returns>
+            <response code="200">Returns the list of pending businesses successfully.</response>
+            <response code="401">Unauthorized - User is not authenticated or lacks Admin role.</response>
+        </member>
+        <member name="M:Project.Web.Controllers.AdminController.ReviewBusiness(System.Guid,Project.Core.DTO.ReviewBusinessDTO)">
+            <summary>
+            Reviews a business verification request and approves or rejects it.
+            </summary>
+            <param name="businessId">The unique identifier of the business to review.</param>
+            <param name="reviewDto">The review decision containing approval status and optional admin notes.</param>
+            <returns>
+            An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> indicating the result of the review operation.
+            </returns>
+            <response code="200">Business reviewed successfully.</response>
+            <response code="400">Bad request - Validation failed or business cannot be reviewed.</response>
+            <response code="401">Unauthorized - User is not authenticated or lacks Admin role.</response>
+            <response code="404">Business not found.</response>
+            <remarks>
+            This endpoint validates the review data, extracts the admin ID from the authenticated user claims,
+            and processes the business verification decision.
+            </remarks>
+        </member>
         <member name="T:WebApi.Controllers.AppAuthController">
             <summary>
             Authentication controller for mobile app users
@@ -112,7 +176,7 @@
             <response code="401">User not authenticated</response>
             <response code="500">Internal server error</response>
         </member>
-        <member name="M:WebApi.Controllers.AppAuthController.ForgotPassword(Project.Core.DTO.ForgotPasswordRequest,FluentValidation.IValidator{Project.Core.DTO.ForgotPasswordRequest})">
+        <member name="M:WebApi.Controllers.AppAuthController.ForgotPassword(Project.Core.DTO.ForgotPasswordRequest)">
             <summary>
             Request a password reset token
             </summary>
@@ -145,7 +209,7 @@
             <response code="400">Invalid email format</response>
             <response code="500">Internal server error</response>
         </member>
-        <member name="M:WebApi.Controllers.AppAuthController.ResetPassword(Project.Core.DTO.ResetPasswordRequest,FluentValidation.IValidator{Project.Core.DTO.ResetPasswordRequest})">
+        <member name="M:WebApi.Controllers.AppAuthController.ResetPassword(Project.Core.DTO.ResetPasswordRequest)">
             <summary>
             Reset password using a valid reset token
             </summary>
@@ -259,6 +323,124 @@
             performed by administrators or system processes. The current user's identity is determined from the
             authentication token rather than from request parameters, enhancing security by preventing spoofing of user
             IDs.</remarks>
+        </member>
+        <member name="T:WebApi.Controllers.WebAuthController">
+            <summary>
+            Web authentication controller for handling business and admin authentication operations.
+            </summary>
+            <remarks>
+            This controller provides endpoints for business/admin registration, login, email confirmation,
+            password management, and admin creation. It is designed for web-based authentication flows.
+            </remarks>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.#ctor(FluentValidation.IValidator{Project.Core.DTO.RegisterDTO},Project.Core.ServiceContracts.IAuthWeb,Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Initializes a new instance of the <see cref="T:WebApi.Controllers.WebAuthController"/> class.
+            </summary>
+            <param name="registerDtoValidator">The validator for registration DTOs.</param>
+            <param name="authWeb">The web authentication service.</param>
+            <param name="configuration">The application configuration.</param>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.RegisterBusiness(Project.Core.DTO.RegisterDTO,Microsoft.AspNetCore.Http.IFormFile)">
+            <summary>
+            Registers a new business account.
+            </summary>
+            <param name="registerDTO">The registration data for the business.</param>
+            <param name="image">Optional profile image file for the business.</param>
+            <returns>A <see cref="T:Project.Core.DTO.RegisterResponse"/> containing registration details and authentication token.</returns>
+            <response code="200">Returns the registration response with user details and token.</response>
+            <response code="400">If validation fails or registration data is invalid.</response>
+            <response code="500">If an internal server error occurs.</response>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.Login(Project.Core.DTO.LoginDTO)">
+            <summary>
+            Authenticates a business or admin user.
+            </summary>
+            <param name="loginDTO">The login credentials containing email and password.</param>
+            <returns>An <see cref="T:Project.Core.DTO.AuthenticationResponse"/> containing user details and JWT token.</returns>
+            <response code="200">Returns the authentication response with token and user information.</response>
+            <response code="400">If the model state is invalid.</response>
+            <response code="401">If credentials are invalid or user type is not authorized for web access.</response>
+            <remarks>
+            Only Business and Admin users can login through this endpoint. Customer users are rejected.
+            </remarks>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.ConfirmEmail(System.String,System.String)">
+            <summary>
+            Confirms a user's email address using the provided token.
+            </summary>
+            <param name="userId">The unique identifier of the user.</param>
+            <param name="token">The email confirmation token sent to the user's email.</param>
+            <returns>A success message if email is confirmed, otherwise an error response.</returns>
+            <response code="200">Email confirmed successfully.</response>
+            <response code="302">Redirects to frontend with error if userId or token is invalid.</response>
+            <response code="400">If email confirmation fails.</response>
+            <response code="500">If an internal server error occurs.</response>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.ResendConfirmation(Project.Core.DTO.ResendConfirmationRequest)">
+            <summary>
+            Resends the email confirmation link to the specified email address.
+            </summary>
+            <param name="request">The request containing the email address.</param>
+            <returns>A success message indicating the email was sent.</returns>
+            <response code="200">Confirmation email sent successfully.</response>
+            <response code="400">If the email is invalid or user not found.</response>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.CreateAdmin(Project.Core.DTO.RegisterDTO,Microsoft.AspNetCore.Http.IFormFile)">
+            <summary>
+            Creates a new admin user account. Requires admin authorization.
+            </summary>
+            <param name="registerDTO">The registration data for the new admin.</param>
+            <param name="image">Optional profile image file for the admin.</param>
+            <returns>A <see cref="T:Project.Core.DTO.RegisterResponse"/> containing the new admin details.</returns>
+            <response code="200">Admin created successfully with registration details.</response>
+            <response code="400">If validation fails or registration data is invalid.</response>
+            <response code="401">If the user is not authenticated.</response>
+            <response code="403">If the user does not have admin role.</response>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.Logout">
+            <summary>
+            Logs out the currently authenticated user.
+            </summary>
+            <returns>A success message if logout is successful.</returns>
+            <response code="200">User logged out successfully.</response>
+            <response code="400">If logout operation fails.</response>
+            <response code="401">If the user is not authenticated.</response>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.ChangePassword(Project.Core.DTO.ChangePasswordRequest,FluentValidation.IValidator{Project.Core.DTO.ChangePasswordRequest})">
+            <summary>
+            Changes the password for the currently authenticated user.
+            </summary>
+            <param name="request">The request containing current and new password.</param>
+            <param name="validator">The validator for change password requests.</param>
+            <returns>A success message if password is changed successfully.</returns>
+            <response code="200">Password changed successfully.</response>
+            <response code="400">If validation fails or password change fails.</response>
+            <response code="401">If the user is not authenticated.</response>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.ForgotPassword(Project.Core.DTO.ForgotPasswordRequest,FluentValidation.IValidator{Project.Core.DTO.ForgotPasswordRequest})">
+            <summary>
+            Initiates the password reset process by generating a reset token and sending it via email.
+            </summary>
+            <param name="request">The request containing the user's email address.</param>
+            <param name="validator">The validator for forgot password requests.</param>
+            <returns>A success message with optional test token for development.</returns>
+            <response code="200">Password reset email sent if the email exists.</response>
+            <response code="400">If validation fails.</response>
+            <remarks>
+            For security reasons, this endpoint always returns success even if the email doesn't exist.
+            The TestToken should be removed in production environments.
+            </remarks>
+        </member>
+        <member name="M:WebApi.Controllers.WebAuthController.ResetPassword(Project.Core.DTO.ResetPasswordRequest,FluentValidation.IValidator{Project.Core.DTO.ResetPasswordRequest})">
+            <summary>
+            Resets a user's password using the provided reset token.
+            </summary>
+            <param name="request">The request containing email, token, and new password.</param>
+            <param name="validator">The validator for reset password requests.</param>
+            <returns>A success message if password is reset successfully.</returns>
+            <response code="200">Password reset successfully.</response>
+            <response code="400">If validation fails or password reset fails.</response>
         </member>
         <member name="T:Program">
             <summary>

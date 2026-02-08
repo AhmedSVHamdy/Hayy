@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Project.Core.Domain.RopositoryContracts
+namespace Project.Core.Domain.RepositoryContracts
 {
     public interface IGenericRepository<TEntity> where TEntity : class
     {

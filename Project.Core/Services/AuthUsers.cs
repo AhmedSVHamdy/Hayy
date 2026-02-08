@@ -1,14 +1,15 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
 using Project.Core.DTO;
 using Project.Core.Enums;
 using Project.Core.ServiceContracts;
-using System;
-using System.Collections.Generic;
+using System.Security.Claims;
+using System.Text;
 
 namespace Project.Core.Services
 {
@@ -17,18 +18,19 @@ namespace Project.Core.Services
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
-        private readonly IImageService _imageService;   // التعامل مع صور Azure
+        private readonly IImageService _imageService;
         private readonly IValidator<RegisterDTO> _registerDtoValidator;
         private readonly IEmailService _emailService;
+        private readonly IHttpContextAccessor _httpContextAccessor; // 👈 مهم لجلب عنوان السيرفر
 
-
-
-        public AuthUsers(UserManager<User> userManager,
+        public AuthUsers(
+            UserManager<User> userManager,
             SignInManager<User> signInManager,
             RoleManager<ApplicationRole> roleManager,
             IImageService imageService,
             IValidator<RegisterDTO> registerDtoValidator,
-            IEmailService emailService)
+            IEmailService emailService,
+            IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -36,27 +38,30 @@ namespace Project.Core.Services
             _imageService = imageService;
             _registerDtoValidator = registerDtoValidator;
             _emailService = emailService;
+            _httpContextAccessor = httpContextAccessor;
         }
-        public async Task<User> Register(RegisterDTO registerDTO, IFormFile? image)
 
+        // ==========================================================
+        // 1. REGISTER
+        // ==========================================================
+        public async Task<User> Register(RegisterDTO registerDTO, IFormFile? image)
         {
-            //  Validate DTO
+            // 1. Validation
             var valResult = await _registerDtoValidator.ValidateAsync(registerDTO);
             if (!valResult.IsValid)
             {
-                // ValidationException
                 var errors = string.Join(", ", valResult.Errors.Select(e => e.ErrorMessage));
                 throw new ArgumentException(errors);
             }
 
-            //  Upload Image
+            // 2. Upload Image
             string? profileImageUrl = null;
             if (image != null && image.Length > 0)
             {
                 profileImageUrl = await _imageService.UploadImageAsync(image);
             }
 
-            // Map DTO to Entity
+            // 3. Map DTO
             User user = new User()
             {
                 FullName = registerDTO.FullName,
@@ -68,193 +73,129 @@ namespace Project.Core.Services
                 UserType = UserType.User.ToString(),
                 IsVerified = false,
                 EmailConfirmed = false,
-
                 UserSettings = new UserSettings { }
-
             };
 
-            // Add User
+            // 4. Create User
             IdentityResult result = await _userManager.CreateAsync(user, registerDTO.Password!);
-
             if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 throw new ArgumentException($"Registration Failed: {errors}");
             }
 
-            //  Handle Roles
+            // 5. Assign Role
             string roleName = UserType.User.ToString();
-
-            // check role
             if (!await _roleManager.RoleExistsAsync(roleName))
             {
-                ApplicationRole applicationRole = new ApplicationRole()
-                {
-                    Name = roleName,
-                    NormalizedName = roleName.ToUpper()
-                };
-                // create role
-                await _roleManager.CreateAsync(applicationRole);
+                await _roleManager.CreateAsync(new ApplicationRole { Name = roleName, NormalizedName = roleName.ToUpper() });
             }
-            // add role
             await _userManager.AddToRoleAsync(user, roleName);
 
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-            var encodedToken = Uri.EscapeDataString(token);
-            var encodedUserId = Uri.EscapeDataString(user.Id.ToString());
-
-
-            // ⚠️ هام: ده رابط السيرفر بتاعك (لو شغال لوكال حط اللوكال هوست، لو مرفوع حط الدومين)
-            // مثال لوكال: https://localhost:7001
-            // مثال مرفوع: https://api.hayy-app.com
-            string baseUrl = "https://localhost:7248";
-
-            // التعديل هنا: اللينك بقى HTTP عادي جداً
-            var confirmLink = $"{baseUrl}/api/app/auth/confirm-email-redirect?userId={encodedUserId}&token={encodedToken}";
-            var message = $@"
-    <div style='font-family: Arial, sans-serif; padding: 20px;'>
-        <h3>Welcome to Hayy App!</h3>
-        <p>Please confirm your account by clicking the button below:</p>
-        <a href='{confirmLink}' 
-           style='background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>
-           Confirm My Account
-        </a>
-        <p>If the button doesn't work, copy this link to your browser:</p>
-        <p>{confirmLink}</p>
-    </div>";
-
-            await _emailService.SendEmailAsync(user.Email!, "Confirm your email", message);
+            // 6. Send Email
+            await SendConfirmationEmailHelper(user);
 
             return user;
         }
 
-
-
-
-
+        // ==========================================================
+        // 2. LOGIN
+        // ==========================================================
         public async Task<User> Login(LoginDTO loginDTO)
         {
-            //  Check if user exists
-            var user = await _userManager.FindByEmailAsync(loginDTO.Email!);
+            var user = await _userManager.FindByEmailAsync(loginDTO.Email);
+            if (user == null) throw new ArgumentException("Invalid email or password");
 
-            if (user == null)
-            {
-                throw new ArgumentException("Invalid Email or Password");
-            }
+            if (!await _userManager.CheckPasswordAsync(user, loginDTO.Password))
+                throw new ArgumentException("Invalid email or password");
 
-            if (!user.IsVerified) // أو !user.EmailConfirmed
-            {
+            // Check if email is confirmed
+            if (!await _userManager.IsEmailConfirmedAsync(user))
                 throw new ArgumentException("Email is not verified. Please check your inbox.");
-            }
-
-            //  Check Password
-            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDTO.Password!,
-                lockoutOnFailure: false);
-
-            if (!result.Succeeded)
-            {
-                throw new ArgumentException("Invalid Email or Password");
-            }
-
 
             return user;
         }
 
+        // ==========================================================
+        // 3. CONFIRM EMAIL
+        // ==========================================================
         public async Task<IdentityResult> ConfirmEmailAsync(string userId, string token)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
-
-            // Identity بتقوم بالواجب وتتأكد من التوكن
-            var result = await _userManager.ConfirmEmailAsync(user, token);
-
-            if (result.Succeeded)
-            {
-                // نحدث الحقل الخاص بيك كمان
-                user.IsVerified = true;
-                await _userManager.UpdateAsync(user);
-            }
-
-            return result;
-        }
-
-        public async Task<IdentityResult> ChangePasswordAsync(string userId, ChangePasswordRequest request)
-        {
-            var user = await _userManager.FindByIdAsync(userId);
-
             if (user == null)
             {
-                // نرجع خطأ مخصص لو المستخدم مش موجود
                 return IdentityResult.Failed(new IdentityError { Description = "User not found" });
             }
 
-            // 1. تغيير الباسورد
-            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
-
+            var result = await _userManager.ConfirmEmailAsync(user, token);
             if (result.Succeeded)
             {
-                // 2. ⚠️ خطوة أمنية مهمة: تصفير الـ Refresh Token
-                // عشان نضمن خروج أي جهاز تاني داخل بنفس الحساب
-                user.RefreshToken = null;
-                user.RefreshTokenExpirationDateTime = DateTime.MinValue;
-
-                // 3. تحديث SecurityStamp (اختياري ولكنه مفيد لإلغاء التوكنات القديمة لو بتستخدم Cookies)
-                // await _userManager.UpdateSecurityStampAsync(user);
-
+                user.IsVerified = true; // تحديث الفلاج الإضافي الخاص بك
                 await _userManager.UpdateAsync(user);
             }
 
             return result;
         }
 
+        // ==========================================================
+        // 4. RESEND CONFIRMATION
+        // ==========================================================
+        public async Task ResendConfirmationEmailAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) throw new ArgumentException("Invalid Email");
+            if (await _userManager.IsEmailConfirmedAsync(user)) throw new ArgumentException("Email is already confirmed");
 
+            await SendConfirmationEmailHelper(user);
+        }
+
+        // ==========================================================
+        // 5. FORGOT PASSWORD (GENERATE TOKEN)
+        // ==========================================================
         public async Task<string?> GeneratePasswordResetTokenAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
-            if (user == null) return null;
+            if (user == null) return null; // Return null effectively hides user existence (Security Best Practice)
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-            // تشفير البيانات عشان اللينك
+            // Prepare Link
             var encodedToken = Uri.EscapeDataString(token);
-            var encodedEmail = Uri.EscapeDataString(email);
+            var encodedEmail = Uri.EscapeDataString(user.Email!);
+            var baseUrl = GetBaseUrl(); // 👈 دالة مساعدة تجيب الرابط أوتوماتيك
 
-            // لينك الموبايل (Deep Link)
-            var resetLink = $"Hayy://reset-password?email={encodedEmail}&token={encodedToken}";
+            // 🔗 الرابط يوجه للـ API Redirect Endpoint وليس الموبايل مباشرة
+            var resetLink = $"{baseUrl}/api/app/auth/reset-password-redirect?email={encodedEmail}&token={encodedToken}";
 
-            // تجهيز الرسالة HTML
             var message = $@"
-            <h3>Password Reset Request</h3>
-            <p>Click the link below to reset your password:</p>
-            <a href='{resetLink}'>Reset Password</a>
-            <br/>
-            <p>If you didn't request this, please ignore this email.</p>";
+                <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
+                    <h2 style='color: #333;'>Reset Your Password</h2>
+                    <p>You requested to reset your password for Hayy App.</p>
+                    <p>Click the button below to proceed:</p>
+                    <a href='{resetLink}' 
+                       style='background-color: #d9534f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;'>
+                       Reset Password
+                    </a>
+                    <p style='margin-top: 20px; font-size: 12px; color: #777;'>If you did not request this, please ignore this email.</p>
+                </div>";
 
-            // إرسال الإيميل بجد ✅
-            await _emailService.SendEmailAsync(email, "Reset Password", message);
-
-            return "Email sent"; // مش هنرجع اللينك خلاص لأسباب أمنية
+            await _emailService.SendEmailAsync(user.Email!, "Reset Your Password", message);
+            return "Email sent";
         }
 
-
-
+        // ==========================================================
+        // 6. RESET PASSWORD (EXECUTE)
+        // ==========================================================
         public async Task<IdentityResult> ResetPasswordAsync(ResetPasswordRequest request)
         {
             var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "Invalid request" });
 
-            if (user == null)
-            {
-                // بنرجع خطأ عام عشان منوضحش للهاكر إن الإيميل مش موجود
-                return IdentityResult.Failed(new IdentityError { Description = "Invalid request" });
-            }
-
-            // 1. محاولة تغيير الباسورد باستخدام التوكن
             var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
 
             if (result.Succeeded)
             {
-                // 2. ⚠️ خطوة أمنية: تصفير الـ Refresh Token لإجبار تسجيل الدخول من جديد
+                // 🔒 Security: Revoke Refresh Token to force re-login on all devices
                 user.RefreshToken = null;
                 user.RefreshTokenExpirationDateTime = DateTime.MinValue;
                 await _userManager.UpdateAsync(user);
@@ -263,60 +204,77 @@ namespace Project.Core.Services
             return result;
         }
 
-        public async Task ResendConfirmationEmailAsync(string email)
+        // ==========================================================
+        // 7. CHANGE PASSWORD
+        // ==========================================================
+        public async Task<IdentityResult> ChangePasswordAsync(string userId, ChangePasswordRequest request)
         {
-            // 1. ندور على اليوزر
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
 
-            // لو مش موجود، نوقف (ممكن ترمي خطأ أو تتجاهل لأسباب أمنية)
-            if (user == null)
+            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+
+            if (result.Succeeded)
             {
-                throw new ArgumentException("User not found");
+                // 🔒 Security: Revoke Refresh Token
+                user.RefreshToken = null;
+                user.RefreshTokenExpirationDateTime = DateTime.MinValue;
+                await _userManager.UpdateAsync(user);
             }
 
-            // 2. لو هو أصلاً مفعل، ملوش لازمة نبعت تاني
-            if (user.IsVerified)
-            {
-                throw new ArgumentException("Email is already verified. You can login directly.");
-            }
-
-            // 3. نكون التوكن من جديد (عشان لو القديم انتهت صلاحيته)
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-            // 4. نجهز اللينك (نفس الكود اللي في Register)
-            var encodedToken = Uri.EscapeDataString(token);
-            var encodedUserId = Uri.EscapeDataString(user.Id.ToString());
-
-            var confirmLink = $"Hayy://confirm-email?userId={encodedUserId}&token={encodedToken}";
-
-            var message = $@"
-        <h3>Resend Confirmation</h3>
-        <p>You requested to resend the confirmation email.</p>
-        <p>Please confirm your account by clicking the link below:</p>
-        <a href='{confirmLink}'>Confirm My Account</a>";
-
-            // 5. إرسال الإيميل
-            await _emailService.SendEmailAsync(user.Email!, "Resend Confirmation Email", message);
+            return result;
         }
 
-
+        // ==========================================================
+        // 8. LOGOUT
+        // ==========================================================
         public async Task<bool> Logout(string userId)
         {
-            // 1. البحث عن المستخدم
             var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return false;
 
-            if (user == null)
-                return false; // المستخدم مش موجود
-
-            // 2. تصفير الـ Refresh Token (أهم خطوة)
             user.RefreshToken = null;
-            user.RefreshTokenExpirationDateTime = DateTime.MinValue; // أو خليها وقت في الماضي
+            user.RefreshTokenExpirationDateTime = DateTime.MinValue;
 
-            // 3. حفظ التغييرات
             var result = await _userManager.UpdateAsync(user);
-
             return result.Succeeded;
+        }
+
+        // ==========================================================
+        // HELPERS
+        // ==========================================================
+        private async Task SendConfirmationEmailHelper(User user)
+        {
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+            var encodedToken = Uri.EscapeDataString(token);
+            var encodedUserId = Uri.EscapeDataString(user.Id.ToString());
+            var baseUrl = GetBaseUrl();
+
+            // 🔗 الرابط يوجه للـ API Redirect Endpoint
+            var confirmLink = $"{baseUrl}/api/app/auth/confirm-email-redirect?userId={encodedUserId}&token={encodedToken}";
+
+            var message = $@"
+                <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
+                    <h2 style='color: #4CAF50;'>Welcome to Hayy App!</h2>
+                    <p>Thanks for signing up. Please verify your email to get started.</p>
+                    <a href='{confirmLink}' 
+                       style='background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;'>
+                       Verify Email
+                    </a>
+                </div>";
+
+            await _emailService.SendEmailAsync(user.Email!, "Verify your email", message);
+        }
+
+        // دالة لجلب الدومين الحالي ديناميكياً
+        private string GetBaseUrl()
+        {
+            var request = _httpContextAccessor.HttpContext?.Request;
+            if (request == null) return "https://localhost:7248"; // Fallback for dev
+
+            // e.g., https://api.hayy.com
+            return $"{request.Scheme}://{request.Host}";
         }
     }
 }
-

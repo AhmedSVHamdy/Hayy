@@ -40,7 +40,7 @@ namespace Project.Core.Services
             // لو العميل موبايل -> وقت طويل + جمهور الموبايل
             if (clientType.ToLower() == "mobile" || clientType.ToLower() == "android" || clientType.ToLower() == "ios")
             {
-                expiration = DateTime.UtcNow.AddDays(30); // شهر كامل
+                expiration = DateTime.UtcNow.AddDays(90); // شهر كامل
                 audience = _configuration["Jwt:AudienceMobile"]!;
             }
             else // لو ويب -> وقت قصير + جمهور الويب
@@ -56,7 +56,7 @@ namespace Project.Core.Services
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(), ClaimValueTypes.DateTime),
+                //new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(), ClaimValueTypes.DateTime),
                 
                 // تصحيح: الـ NameIdentifier يفضل يكون الـ ID مش الإيميل (عشان ده الـ Primary Key)
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),

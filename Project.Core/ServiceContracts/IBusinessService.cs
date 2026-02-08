@@ -2,13 +2,20 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Project.Core.DTO;
 
 namespace Project.Core.ServiceContracts
 {
     public interface IBusinessService
     {
-        // دالة الموافقة على البيزنس
-        Task<BusinessResponse?> ApproveBusinessProfile(Guid businessId);
+
+        // 1. دالة تقديم بيانات البيزنس (Onboarding)
+        Task SubmitBusinessDetailsAsync(Guid userId, BusinessOnboardingDTO model);
+
+        // 2. دالة جلب قائمة الطلبات المعلقة للأدمن
+        Task<List<BusinessVerificationSummaryDTO>> GetPendingVerificationsAsync();
+
+        // 3. دالة مراجعة الأدمن (Approve / Reject)
+        Task ReviewBusinessAsync(Guid businessId, ReviewBusinessDTO reviewDto, Guid adminId);
+
     }
 }

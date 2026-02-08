@@ -11,12 +11,16 @@ namespace Project.Core.Domain.Entities
         public string IdentityCardImage { get; set; } = string.Empty;
         public VerificationStatus Status { get; set; }
         public string? RejectionReason { get; set; }
-        public Guid AdminId { get; set; }
+
+        // المفتاح الأجنبي للأدمن
+        public Guid? AdminId { get; set; }
+
         public DateTime SubmittedAt { get; set; }
         public DateTime? ReviewedAt { get; set; }
 
         public Business Business { get; set; } = null!;
-        public Admin Admin { get; set; } = null!;
+
+        // 👇 التعديل هنا: النوع User والاسم Admin (عشان توضح الغرض)
+        public User? Admin { get; set; }
     }
 }
-

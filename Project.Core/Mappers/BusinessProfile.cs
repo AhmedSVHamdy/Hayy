@@ -1,9 +1,7 @@
 ﻿using AutoMapper;
 using Project.Core.Domain.Entities;
 using Project.Core.DTO;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Linq; // 👈 مهمة جداً عشان نقدر نستخدم OrderByDescending
 
 namespace Project.Core.Mappers
 {
@@ -11,17 +9,33 @@ namespace Project.Core.Mappers
     {
         public BusinessProfile()
         {
+            // =========================================================
+            // 1. From Entity TO Response (Get Data)
+            // =========================================================
             CreateMap<Business, BusinessResponse>()
-                // 1. تحويل الـ Enum لنص
+                // أ. تحويل الـ Enum لنص
                 .ForMember(dest => dest.VerificationStatus, opt => opt.MapFrom(src => src.VerificationStatus.ToString()))
 
-                // 2. اسم المالك (User.FullName)
-                // تأكد إن User فيه FullName، لو مفيش استخدم UserName
-                .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.User != null ? src.User.FullName : "Unknown"))
+                // ب. اسم المالك (User.FullName) مع فحص Null
+                .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src =>
+                    src.User != null ? src.User.FullName : "Unknown"))
 
-                // 3. 👇 التصحيح هنا: استخدمنا ReviewedAt
+                // ج. تاريخ المراجعة (VerifiedAt)
+                // ⚠️ التصحيح: لازم نجيب أحدث عملية توثيق من القائمة
                 .ForMember(dest => dest.VerifiedAt, opt => opt.MapFrom(src =>
-                    src.BusinessVerifications != null ? (DateTime?)src.BusinessVerifications.ReviewedAt : null));
+                    src.Verifications != null && src.Verifications.Any()
+                        ? src.Verifications.OrderByDescending(v => v.ReviewedAt).FirstOrDefault().ReviewedAt
+                        : null));
+
+
+            // =========================================================
+            // 2. From DTO TO Entity (Create Data - Onboarding)
+            // =========================================================
+            CreateMap<BusinessOnboardingDTO, Business>()
+                // نتجاهل الحقول اللي بتتولد أوتوماتيك
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.VerificationStatus, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());
         }
     }
 }
