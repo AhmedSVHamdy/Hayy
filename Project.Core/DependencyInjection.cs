@@ -39,7 +39,6 @@ namespace Project.Core
             services.AddScoped<IImageService, ImageService>();
             services.AddScoped<IInterestService, InterestService>();
             services.AddScoped<INotificationService, NotificationService>();
-            services.AddScoped<IBusinessService, BusinessService>();
 
 
             services.AddScoped<IAdminService, AdminService>();
