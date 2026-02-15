@@ -13,7 +13,7 @@ namespace Project.Infrastructure.Migrations
 {
     [DbContext(typeof(HayyContext))]
     [Migration("20260205003055_initial")]
-    partial class initial
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

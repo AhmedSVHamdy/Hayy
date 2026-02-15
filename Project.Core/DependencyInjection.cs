@@ -32,13 +32,14 @@ namespace Project.Core
             // 3. تسجيل خدمات الـ Authentication
             services.AddTransient<IJwtService, JwtService>();
             services.AddScoped<IAuthWeb, AuthWeb>();
-            services.AddScoped<IAuthUsers, AuthUsers>();
+            services.AddScoped<IAuthUsers, AuthApp>();
 
             // 4. تسجيل باقي خدمات البيزنس
             services.AddScoped<IImageService, ImageService>();
             services.AddScoped<IInterestService, InterestService>();
             services.AddScoped<INotificationService, NotificationService>();
 
+            services.AddScoped<IBusinessService, BusinessService>();
 
             services.AddScoped<IAdminService, AdminService>();
 
