@@ -9,7 +9,7 @@ namespace Project.Core.Domain.Entities
         public Guid PlanId { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public BusinessPlanStatus Status { get; set; }
+        public BusinessPlanStatus Status { get; set; }                   
 
         public Business Business { get; set; } = null!;
         public SubscriptionPlan SubscriptionPlan { get; set; } = null!;

@@ -25,6 +25,14 @@ namespace Project.Core.ServiceContracts
         Task<string?> GeneratePasswordResetTokenAsync(string email);
         Task<IdentityResult> ResetPasswordAsync(ResetPasswordRequest request);
 
+        Task<bool> MakeAdmin(string email);
 
+        Task<AuthenticationResponse> RefreshTokenAsync(TokenDTO tokenDTO);
+
+        Task<UserProfileDTO> GetUserProfileAsync(string userId);
+
+        Task<bool> CheckEmailExistsAsync(string email);
+
+        Task<bool> RevokeTokenAsync(string token);
     }
 }

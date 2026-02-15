@@ -54,13 +54,23 @@ builder.Services.AddSignalR();
 
 
 // CORS
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+
+// 2. إعداد خدمة الـ CORS
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(app =>
+    options.AddPolicy("AllowClient", policyBuilder =>
     {
-        app.WithOrigins(builder.Configuration.GetSection("Origins").Get<string[]>()!);
+        policyBuilder
+            .WithOrigins(allowedOrigins!) // السماح للروابط دي بس
+            .AllowAnyHeader()             // السماح بأي Header
+            .AllowAnyMethod()             // السماح بـ GET, POST, PUT, DELETE
+            .AllowCredentials();          // السماح بالكوكيز والتوكن (مهم جداً للـ SignalR)
     });
 });
+
+
+
 var configIssuer = builder.Configuration["Jwt:Issuer"];
 var configKey = builder.Configuration["Jwt:Key"];
 
