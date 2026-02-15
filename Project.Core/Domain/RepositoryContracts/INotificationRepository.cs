@@ -1,7 +1,9 @@
 ﻿using Project.Core.Domain.Entities;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Text;
+using System.Linq.Expressions;
 
 namespace Project.Core.Domain.RepositoryContracts
 {
@@ -30,5 +32,10 @@ namespace Project.Core.Domain.RepositoryContracts
 
         // 8. تحديث مجموعة (عشان Mark All تبقى سريعة)
         Task UpdateRangeAsync(IEnumerable<Notification> notifications);
+
+        Task<Notification?> GetByIdAndUserIdAsync(Guid id, Guid userId);
+
+        // بنعدل الدالة القديمة أو نضيف واحدة جديدة
+        Task<List<Notification>> GetByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize);
     }
 }

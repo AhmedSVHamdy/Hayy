@@ -27,5 +27,9 @@ namespace Project.Infrastructure.SignalR
                     .SendAsync("ReceiveNotification", notification);
             }
         }
+        public async Task SendNotificationToGroup(string groupName, string message)
+        {
+            await _hubContext.Clients.Group(groupName).SendAsync("ReceiveNotification", message);
+        }
     }
 }

@@ -9,6 +9,7 @@
         Follow = 4,
         Search = 5,
         Book = 6,
-        Review = 7
+        Review = 7,
+        Post = 8
     }
 }

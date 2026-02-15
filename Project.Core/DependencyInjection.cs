@@ -9,6 +9,7 @@ using Project.Core.Mappers;
 using Project.Core.ServiceContracts;
 using Project.Core.Services;
 using Project.Core.Validators;
+using System.Reflection;
 
 namespace Project.Core
 {
@@ -42,6 +43,17 @@ namespace Project.Core
 
             services.AddScoped<IAdminService, AdminService>();
 
+
+            // 2. تفعيل FluentValidation
+            services.AddValidatorsFromAssemblyContaining<CreateUserLogValidator>();
+            // AutoMapper Profiles
+
+            services.AddAutoMapper(cfg => cfg.AddProfile<ReviewProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<BusinessPostProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<CommentProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<LikeProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<NotificationProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<UserLogProfile>());
             return services;
         }
     }

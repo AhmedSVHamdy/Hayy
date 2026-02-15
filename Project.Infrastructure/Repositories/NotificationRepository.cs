@@ -77,5 +77,21 @@ namespace Project.Infrastructure.Repositories
             _context.Notifications.UpdateRange(notifications);
             await _context.SaveChangesAsync();
         }
+        public async Task<Notification?> GetByIdAndUserIdAsync(Guid id, Guid userId)
+        {
+            // لو شغال Entity Framework
+            return await _context.Notifications
+                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+        }
+
+        public async Task<List<Notification>> GetByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize)
+        {
+            return await _context.Notifications
+                .Where(n => n.UserId == userId)
+                .OrderByDescending(n => n.CreatedAt) // 👈 مهم جداً: الأحدث الأول
+                .Skip((pageNumber - 1) * pageSize)   // يفط الصفحات اللي فاتت
+                .Take(pageSize)                      // ياخد عدد معين بس (مثلاً 20)
+                .ToListAsync();
+        }
     }
 }

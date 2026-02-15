@@ -313,6 +313,15 @@
             Helper method to format FluentValidation errors
             </summary>
         </member>
+        <member name="T:WebApi.Controllers.BusinessPostsController">
+            <summary>
+            Handles HTTP requests related to post creation and retrieval for specific places.
+            </summary>
+            <remarks>This controller provides endpoints for creating new posts and retrieving posts associated
+            with a particular place. It is intended to be used as part of a RESTful API and is configured with attribute
+            routing under the 'api/[controller]' route. All actions require valid input models and return appropriate HTTP
+            status codes based on the operation outcome.</remarks>
+        </member>
         <member name="T:WebApi.Controllers.NotificationsController">
             <summary>
             Represents an API controller for managing user notifications, including creating new notifications, retrieving
@@ -323,6 +332,14 @@
             performed by administrators or system processes. The current user's identity is determined from the
             authentication token rather than from request parameters, enhancing security by preventing spoofing of user
             IDs.</remarks>
+        </member>
+        <member name="T:WebApi.Controllers.ReviewsController">
+            <summary>
+            Handles HTTP requests related to product reviews, including creating new reviews.
+            </summary>
+            <remarks>This controller provides endpoints for managing reviews in the application. It is configured
+            as an API controller and uses dependency injection to access review-related services and object mapping
+            functionality. All routes are prefixed with 'api/reviews'.</remarks>
         </member>
         <member name="T:WebApi.Controllers.WebAuthController">
             <summary>

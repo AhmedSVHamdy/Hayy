@@ -22,6 +22,7 @@ using Project.Infrastructure.Repositories;
 using Project.Infrastructure.SignalR;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace Project.Infrastructure
@@ -109,13 +110,19 @@ namespace Project.Infrastructure
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IUserInterestRepository, UserInterestRepository>();
 
-            services.AddAutoMapper(cfg => cfg.AddProfile<UserLogProfile>());
+            
 
             services.AddScoped<IAdminRepository, AdminRepository>();
+            services.AddScoped<IReviewRepository, ReviewRepository>();
+            services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IBusinessPostRepository, BusinessPostRepository>();
+            services.AddScoped<IBusinessPostService, BusinessPostService>();
+            services.AddScoped<IPostCommentRepository, PostCommentRepository>();
+            services.AddScoped<IPostCommentService, PostCommentService>();
+            services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+            services.AddScoped<IPostLikeService, PostLikeService>();
 
-
-            // 2. تفعيل FluentValidation
-            services.AddValidatorsFromAssemblyContaining<CreateUserLogValidator>();
+            
 
             return services;
         }

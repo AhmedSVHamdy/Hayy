@@ -26,5 +26,7 @@ namespace Project.Infrastructure.SignalR
             // ممكن هنا تسجل إن اليوزر "Offline"
             await base.OnDisconnectedAsync(exception);
         }
+
+       
     }
 }

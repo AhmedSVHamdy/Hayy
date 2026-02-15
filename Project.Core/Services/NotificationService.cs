@@ -14,18 +14,15 @@ namespace Project.Core.Services
         private readonly INotificationRepository _repo;
         private readonly IMapper _mapper;
         private readonly INotifier _notifier; // SignalR
-        private readonly IValidator<NotificationAddRequest> _validator; // 👈 الحقن هنا
 
         public NotificationService(
             INotificationRepository repo,
             IMapper mapper,
-            INotifier notifier,
-            IValidator<NotificationAddRequest> validator) // بنستلم الفاليداتور
+            INotifier notifier) // بنستلم الفاليداتور
         {
             _repo = repo;
             _mapper = mapper;
             _notifier = notifier;
-            _validator = validator;
         }
 
         // =========================================================
@@ -33,14 +30,7 @@ namespace Project.Core.Services
         // =========================================================
         public async Task<NotificationResponse> CreateNotification(NotificationAddRequest request)
         {
-            var validationResult = await _validator.ValidateAsync(request);
-            if (!validationResult.IsValid)
-            {
-                // بنجمع الأخطاء ونرميها عشان الميدلوير يرجعها 400 Bad Request
-                var errorMsg = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage));
-                throw new ArgumentException(errorMsg);
-            }
-
+            
             Notification notification;
             Notification? existingNotification = null;
 
@@ -123,13 +113,18 @@ namespace Project.Core.Services
         // =========================================================
         // 3. قراءة إشعار واحد
         // =========================================================
-        public async Task MarkAsReadAsync(Guid notificationId)
+        public async Task MarkAsReadAsync(Guid notificationId, Guid userId)
         {
             var notification = await _repo.GetByIdAsync(notificationId);
-            if (notification != null && !notification.IsRead)
+
+            // 2. هنا بقى "التأمين": نتأكد إن الإشعار موجود فعلاً ومملوك للمستخدم اللي باعت الطلب
+            if (notification != null && notification.UserId == userId)
             {
-                notification.IsRead = true;
-                await _repo.UpdateAsync(notification);
+                if (!notification.IsRead)
+                {
+                    notification.IsRead = true;
+                    await _repo.UpdateAsync(notification);
+                }
             }
         }
 
@@ -157,5 +152,17 @@ namespace Project.Core.Services
         {
             return await _repo.CountUnreadAsync(userId);
         }
+
+        public async Task<List<NotificationResponse>> GetUserNotificationsPaged(Guid userId, int pageNumber, int pageSize)
+        {
+            // لو اليوزر باعت أرقام غلط (صفر أو سالب) بنحط قيم افتراضية
+            if (pageNumber <= 0) pageNumber = 1;
+            if (pageSize <= 0) pageSize = 10;
+
+            var notifications = await _repo.GetByUserIdPagedAsync(userId, pageNumber, pageSize);
+            return _mapper.Map<List<NotificationResponse>>(notifications);
+        }
+
+
     }
 }

@@ -36,8 +36,9 @@ namespace WebApi.Controllers
 
         // 1. 📤 إرسال إشعار جديد (للأدمن أو السيستم)
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         //[Authorize(Roles = "Admin")] يفضل تحط عليها قيد إن "الأدمن" بس هو اللي يقدر يندهها، عشان مش أي يوزر يبعت إشعارات ليوزر تاني بمزاجه.
-        public async Task<IActionResult> Create([FromForm] NotificationAddRequest request)
+        public async Task<IActionResult> Create([FromBody] NotificationAddRequest request)
         {
             var result = await _notificationService.CreateNotification(request);
             return Ok(result);
@@ -45,13 +46,13 @@ namespace WebApi.Controllers
 
         // 2. 📜 جلب كل إشعارات المستخدم الحالي
         [HttpGet]
-        public async Task<IActionResult> GetMyNotifications()
+        public async Task<IActionResult> GetMyNotifications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var claims = User.Claims.ToList();
-            Guid userId = User.GetUserId();
+            var userId = User.GetUserId(); // بنجيب الـ ID من التوكن
+
             if (userId == Guid.Empty) return Unauthorized();
 
-            var result = await _notificationService.GetUserNotifications(userId!);
+            var result = await _notificationService.GetUserNotificationsPaged(userId, pageNumber, pageSize);
             return Ok(result);
         }
 
@@ -60,17 +61,19 @@ namespace WebApi.Controllers
         public async Task<IActionResult> GetUnreadCount()
         {
             var userId = User.GetUserId();
-            if (userId == Guid.Empty) return Unauthorized();
-
             var count = await _notificationService.GetUnreadCountAsync(userId);
-            return Ok(new { count }); // بيرجع JSON زي { "count": 5 }
+            return Ok(new { count });
         }
 
         // 4. ✅ تعليم إشعار واحد كمقروء (لما يضغط عليه)
         [HttpPatch("{id}/read")]
         public async Task<IActionResult> MarkAsRead(Guid id)
         {
-            await _notificationService.MarkAsReadAsync(id);
+            var userId = User.GetUserId();
+
+            // 🔐 تعديل 3 (مهم): بعتنا الـ userId للسيرفس عشان نتأكد إن الإشعار ملك لليوزر ده
+            await _notificationService.MarkAsReadAsync(id, userId);
+
             return Ok(new { Message = "Notification marked as read" });
         }
 
@@ -79,8 +82,6 @@ namespace WebApi.Controllers
         public async Task<IActionResult> MarkAllAsRead()
         {
             var userId = User.GetUserId();
-            if (userId == Guid.Empty) return Unauthorized();
-
             await _notificationService.MarkAllAsReadAsync(userId);
             return Ok(new { Message = "All notifications marked as read" });
         }

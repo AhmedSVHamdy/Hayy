@@ -15,12 +15,14 @@ namespace Project.Core.ServiceContracts
         Task<List<NotificationResponse>> GetUserNotifications(Guid userId);
 
         // 3. قراءة إشعار واحد (مسحت الدالة المكررة وخليت دي بس)
-        Task MarkAsReadAsync(Guid notificationId);
+        Task MarkAsReadAsync(Guid notificationId, Guid userId);
 
         // 4. قراءة كل الإشعارات
         Task MarkAllAsReadAsync(Guid userId);
 
         // 5. عداد الإشعارات غير المقروءة
         Task<int> GetUnreadCountAsync(Guid userId);
+
+        Task<List<NotificationResponse>> GetUserNotificationsPaged(Guid userId, int pageNumber, int pageSize);
     }
 }
