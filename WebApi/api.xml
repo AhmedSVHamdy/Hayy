@@ -266,16 +266,49 @@
             routing under the 'api/[controller]' route. All actions require valid input models and return appropriate HTTP
             status codes based on the operation outcome.</remarks>
         </member>
-        <member name="T:WebApi.Controllers.NotificationsController">
+        <member name="M:WebApi.Controllers.NotificationsController.Create(Project.Core.DTO.NotificationAddRequest)">
             <summary>
-            Represents an API controller for managing user notifications, including creating new notifications, retrieving
-            notifications for the current user, and marking notifications as read.
+            Creates a new notification based on the specified request data.
             </summary>
-            <remarks>All endpoints in this controller require the caller to be authenticated. The controller is
-            intended for use by authorized users only, and some actions (such as creating notifications) are typically
-            performed by administrators or system processes. The current user's identity is determined from the
-            authentication token rather than from request parameters, enhancing security by preventing spoofing of user
-            IDs.</remarks>
+            <remarks>This action is restricted to users with the Admin role. Only administrators are
+            permitted to create notifications using this endpoint.</remarks>
+            <param name="request">The notification details to be created. Must not be null.</param>
+            <returns>An IActionResult containing the result of the notification creation operation.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.GetMyNotifications(System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of notifications for the currently authenticated user.
+            </summary>
+            <param name="pageNumber">The page number of the notifications to retrieve. Must be greater than or equal to 1. The default value is
+            1.</param>
+            <param name="pageSize">The number of notifications to include on each page. Must be greater than 0. The default value is 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the paginated notifications for the current user. Returns an
+            unauthorized result if the user is not authenticated.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.GetUnreadCount">
+            <summary>
+            Retrieves the number of unread notifications for the current user.
+            </summary>
+            <remarks>This endpoint is typically used to display the unread notification count in user
+            interface elements such as navigation bars. The count is specific to the authenticated user making the
+            request.</remarks>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a JSON object with a <c>count</c> property that represents the
+            number of unread notifications. The value is zero if there are no unread notifications.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.MarkAsRead(System.Guid)">
+            <summary>
+            Marks the specified notification as read for the current user.
+            </summary>
+            <param name="id">The unique identifier of the notification to mark as read.</param>
+            <returns>An HTTP 200 response if the notification was successfully marked as read.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.MarkAllAsRead">
+            <summary>
+            Marks all notifications for the current user as read.
+            </summary>
+            <remarks>This action applies to all notifications associated with the authenticated user. The
+            response does not include the updated notification list.</remarks>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.OkObjectResult"/> containing a confirmation message if the operation succeeds.</returns>
         </member>
         <member name="T:WebApi.Controllers.ReviewsController">
             <summary>
@@ -284,6 +317,30 @@
             <remarks>This controller provides endpoints for managing reviews in the application. It is configured
             as an API controller and uses dependency injection to access review-related services and object mapping
             functionality. All routes are prefixed with 'api/reviews'.</remarks>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewsController.AddReview(Project.Core.DTO.CreateReviewDto)">
+            <summary>
+            Creates a new review for a place using the provided review data.
+            </summary>
+            <remarks>Returns 400 Bad Request if the review cannot be added due to invalid operation, such
+            as duplicate reviews. Returns 404 Not Found if the specified place does not exist. Returns 500 Internal
+            Server Error for unexpected failures.</remarks>
+            <param name="dto">The review information to be added. Must include valid place and rating details. The user identifier is set
+            automatically based on the authenticated user.</param>
+            <returns>An HTTP 201 Created response containing the newly created review if successful; otherwise, an appropriate
+            error response such as 400 Bad Request or 404 Not Found.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewsController.GetReviewsByPlace(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of reviews for the specified place.
+            </summary>
+            <remarks>This endpoint returns reviews in a paginated format. If the specified place has no
+            reviews, the response will contain an empty list with status code 200 (OK).</remarks>
+            <param name="placeId">The unique identifier of the place for which to retrieve reviews.</param>
+            <param name="pageNumber">The page number of results to return. Must be greater than or equal to 1. Defaults to 1.</param>
+            <param name="pageSize">The number of reviews to include per page. Must be greater than 0. Defaults to 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a list of reviews for the specified place. Returns an empty list
+            if no reviews are found.</returns>
         </member>
         <member name="T:WebApi.Controllers.WebAuthController">
             <summary>

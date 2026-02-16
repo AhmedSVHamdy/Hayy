@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Text;
-using System.Linq.Expressions;
-
 namespace Project.Core.Domain.RepositoryContracts
 {
     public interface INotificationRepository
@@ -37,5 +35,8 @@ namespace Project.Core.Domain.RepositoryContracts
 
         // بنعدل الدالة القديمة أو نضيف واحدة جديدة
         Task<List<Notification>> GetByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize);
+
+        // في الـ Interface
+        Task<int> GetCountByUserIdAsync(Guid userId);
     }
 }

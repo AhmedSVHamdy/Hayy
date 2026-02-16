@@ -36,9 +36,28 @@ namespace Project.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+     
+        public async Task<List<Review>> GetReviewsPagedAsync(Guid placeId, int pageNumber, int pageSize)
+        {
+            return await _context.Reviews
+                .Where(r => r.PlaceId == placeId)      // فلتر بالمكان
+                .Include(r => r.User)                  // 👈 مهم جداً: هات بيانات اليوزر (الاسم والصورة) مع الريفيو
+                .OrderByDescending(r => r.CreatedAt)   // الأحدث الأول
+                .Skip((pageNumber - 1) * pageSize)     // فوت الصفحات اللي فاتت
+                .Take(pageSize)                        // هات العدد المطلوب بس
+                .ToListAsync();
+        }
+
+        // 👇 2. تنفيذ دالة عد الريفيوهات
+        public async Task<int> GetCountByPlaceIdAsync(Guid placeId)
+        {
+            return await _context.Reviews
+                .CountAsync(r => r.PlaceId == placeId);
+        }
+
+        // 👇 3. دالة التأكد من عدم التكرار (لو مش مكتوبة عندك)
         public async Task<bool> HasUserReviewedPlaceAsync(Guid userId, Guid placeId)
         {
-            // بنقول للداتابيز: هل فيه أي ريفيو بيحقق الشرطين دول مع بعض؟
             return await _context.Reviews
                 .AnyAsync(r => r.UserId == userId && r.PlaceId == placeId);
         }

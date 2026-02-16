@@ -88,13 +88,21 @@ namespace Project.Core.Services
             return _mapper.Map<ReviewResponseDto>(addedReview);
         }
 
-        public async Task<IEnumerable<ReviewResponseDto>> GetReviewsByPlaceIdAsync(Guid placeId)
+        public async Task<PagedResult<ReviewResponseDto>> GetReviewsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize)
         {
-            // 1. نجيب البيانات من SQL
-            var reviews = await _reviewRepository.GetReviewsByPlaceIdAsync(placeId);
+            if (pageNumber <= 0) pageNumber = 1;
+            if (pageSize <= 0) pageSize = 10;
 
-            // 2. نحولها لـ List of DTOs ونرجعها
-            return _mapper.Map<IEnumerable<ReviewResponseDto>>(reviews);
+            // أ) هات الداتا (ReviewRepository لازم يكون فيه دالة Paged)
+            // (مطلوب منك تضيف GetReviewsPagedAsync في الريبوزيتوري زي ما عملنا في النوتفكيشن)
+            var reviews = await _reviewRepository.GetReviewsPagedAsync(placeId, pageNumber, pageSize);
+
+            // ب) هات العدد الكلي
+            var totalCount = await _reviewRepository.GetCountByPlaceIdAsync(placeId);
+
+            // ج) التحويل والرد
+            var dtos = _mapper.Map<List<ReviewResponseDto>>(reviews);
+            return new PagedResult<ReviewResponseDto>(dtos, totalCount, pageNumber, pageSize);
         }
     }
 }

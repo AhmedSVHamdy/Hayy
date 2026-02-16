@@ -23,6 +23,6 @@ namespace Project.Core.ServiceContracts
         // 5. عداد الإشعارات غير المقروءة
         Task<int> GetUnreadCountAsync(Guid userId);
 
-        Task<List<NotificationResponse>> GetUserNotificationsPaged(Guid userId, int pageNumber, int pageSize);
+        Task<PagedResult<NotificationResponse>> GetUserNotificationsPaged(Guid userId, int pageNumber, int pageSize);
     }
 }

@@ -153,14 +153,27 @@ namespace Project.Core.Services
             return await _repo.CountUnreadAsync(userId);
         }
 
-        public async Task<List<NotificationResponse>> GetUserNotificationsPaged(Guid userId, int pageNumber, int pageSize)
+        public async Task<PagedResult<NotificationResponse>> GetUserNotificationsPaged(Guid userId, int pageNumber, int pageSize)
         {
-            // لو اليوزر باعت أرقام غلط (صفر أو سالب) بنحط قيم افتراضية
+            // 1. تنظيف المدخلات (عشان لو الفرونت بعت أرقام غلط)
             if (pageNumber <= 0) pageNumber = 1;
             if (pageSize <= 0) pageSize = 10;
+            // ممكن تحط حد أقصى للـ pageSize عشان محدش يطلب 1000 مرة واحدة
+            if (pageSize > 50) pageSize = 50;
 
+            // 2. جلب البيانات (الصفحة المطلوبة فقط)
+            // ملاحظة: تأكد إنك ضفت دالة GetByUserIdPagedAsync في الريبوزيتوري
             var notifications = await _repo.GetByUserIdPagedAsync(userId, pageNumber, pageSize);
-            return _mapper.Map<List<NotificationResponse>>(notifications);
+
+            // 3. جلب العدد الكلي للإشعارات (عشان نحسب عدد الصفحات)
+            // ملاحظة: تأكد إنك ضفت دالة GetCountByUserIdAsync في الريبوزيتوري
+            var totalCount = await _repo.GetCountByUserIdAsync(userId);
+
+            // 4. تحويل البيانات لـ DTO
+            var notificationDtos = _mapper.Map<List<NotificationResponse>>(notifications);
+
+            // 5. تجميع كله في الغلاف (PagedResult) وإرجاعه
+            return new PagedResult<NotificationResponse>(notificationDtos, totalCount, pageNumber, pageSize);
         }
 
 

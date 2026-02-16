@@ -93,5 +93,10 @@ namespace Project.Infrastructure.Repositories
                 .Take(pageSize)                      // ياخد عدد معين بس (مثلاً 20)
                 .ToListAsync();
         }
+        // في الـ Implementation
+        public async Task<int> GetCountByUserIdAsync(Guid userId)
+        {
+            return await _context.Notifications.CountAsync(n => n.UserId == userId);
+        }
     }
 }

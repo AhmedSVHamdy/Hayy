@@ -7,11 +7,21 @@ namespace Project.Core.Domain.RepositoryContracts
 {
     public interface IReviewRepository
     {
+        // 1. دالة إضافة ريفيو جديد
         Task<Review> AddReviewAsync(Review review);
-        // ممكن تضيف دوال تانية زي GetReviewsByPlaceId
+
+        // 2. (القديمة) بتجيب كله - ممكن تخليها لو محتاجها في حتة تانية، بس الأساسي هيبقى الـ Paged
         Task<IEnumerable<Review>> GetReviewsByPlaceIdAsync(Guid placeId);
 
-        // دي وظيفتها ترجع true لو اليوزر قيم المكان ده قبل كده
+        // ✅ 3. (الجديدة) دالة الجلب بالصفحات (Pagination)
+        // دي اللي السيرفس كانت بتعيط عليها وبتقول مش لاقياها
+        Task<List<Review>> GetReviewsPagedAsync(Guid placeId, int pageNumber, int pageSize);
+
+        // ✅ 4. (الجديدة) دالة عد الريفيوهات
+        // عشان نعرف نحسب عدد الصفحات الكلي (TotalPages)
+        Task<int> GetCountByPlaceIdAsync(Guid placeId);
+
+        // 5. دالة التحقق من التكرار
         Task<bool> HasUserReviewedPlaceAsync(Guid userId, Guid placeId);
     }
 }
