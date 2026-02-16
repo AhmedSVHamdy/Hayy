@@ -1,204 +1,137 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;    
-using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
-using Project.Core;
-using Project.Core.Domain;
-using Project.Core.Domain.Entities;
-using Project.Core.Domain.RepositoryContracts;
-using Project.Core.Domain.RopositoryContracts;
-using Project.Core.ServiceContracts;
-using Project.Core.Services;
-using Project.Infrastructure;
-using Project.Infrastructure.ApplicationDbContext;
-using Project.Infrastructure.Configurations;
-using Project.Infrastructure.Repositories;
-using Project.Infrastructure.SignalR;
-using System.Configuration;
-using System.IdentityModel.Tokens.Jwt;
+using Project.Core; // 👈 1. ضيفنا دي عشان يشوف AddCoreServices
+using Project.Infrastructure; // ضروري عشان يشوف دالة AddInfrastructureServices
+using Project.Infrastructure.ApplicationDbContext; // عشان الـ Seeder
+using Project.Infrastructure.SignalR; // عشان NotificationHub
+using System.Reflection;
 using System.Text;
-using WebApi.Middlewares;
+using WebApi.Middlewares; // لو عندك Middleware
 
-IdentityModelEventSource.ShowPII = true;
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ==========================================
+// 1. استدعاء طبقات المشروع (Infrastructure & Core)
+// ==========================================
 
-builder.Services.AddControllers(options =>
-{
-    //Authorization policy
-    //var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
-    //options.Filters.Add(new AuthorizeFilter(policy));
+// أ) البنية التحتية (Database, Identity, Repositories, SignalR)
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
-});
+// ب) قلب المشروع (Services, AutoMapper, Validators) 👈 2. ضيفنا السطر المهم ده
+builder.Services.AddCoreServices(builder.Configuration);
 
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// Swagger
+// ==========================================
+// 2. إعدادات الـ Web API (Controllers, Swagger, CORS)
+// ==========================================
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// إعدادات Swagger
 builder.Services.AddSwaggerGen(options =>
 {
-    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "api.xml"));
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
 });
 
-// Infrastructure and Core 
-builder.Services.AddInfrastructureServices(builder.Configuration);
-builder.Services.AddCoreServices(builder.Configuration);
-builder.Services.AddSignalR();
-
-
-
-// CORS
+// إعدادات CORS
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
-
-// 2. إعداد خدمة الـ CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policyBuilder =>
     {
         policyBuilder
-            .WithOrigins(allowedOrigins!) // السماح للروابط دي بس
-            .AllowAnyHeader()             // السماح بأي Header
-            .AllowAnyMethod()             // السماح بـ GET, POST, PUT, DELETE
-            .AllowCredentials();          // السماح بالكوكيز والتوكن (مهم جداً للـ SignalR)
+            .WithOrigins(allowedOrigins ?? new[] { "http://localhost:4200" })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
-
-
-var configIssuer = builder.Configuration["Jwt:Issuer"];
-var configKey = builder.Configuration["Jwt:Key"];
-
-Console.WriteLine("------------------------------------------------");
-Console.WriteLine($"🧐 SERVER EXPECTS Issuer: '{configIssuer}'");
-Console.WriteLine($"🧐 TOKEN HAS Issuer:      'http://localhost:5058'"); // ده اللي أنا طلعته من التوكن بتاعك
-Console.WriteLine($"🔑 Key Length Loaded:     {configKey?.Length ?? 0}");
-Console.WriteLine("------------------------------------------------");
-
+// ==========================================
+// 3. إعدادات التوثيق (JWT Authentication)
+// ==========================================
 var secretKey = builder.Configuration["Jwt:Key"];
-
-// 🛑 اختبار سريع: طباعة أول 5 حروف من المفتاح عشان تتأكد إنه قرأ المفتاح الصح
-// المفروض يطبع: Key Loaded: HayyI...
-if (!string.IsNullOrEmpty(secretKey))
+builder.Services.AddAuthentication(options =>
 {
-    Console.WriteLine($"✅ Key Loaded successfully from Config/Secrets! Starts with: {secretKey.Substring(0, 5)}...");
-}
-else
-{
-    Console.WriteLine("❌❌❌ ERROR: Key is NULL or EMPTY! Check User Secrets ID.");
-}
-builder.Services.AddAuthentication(options => {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-
-
 })
- .AddJwtBearer(options => {
-     
-     options.TokenValidationParameters = new TokenValidationParameters()
-     {
-         ValidateIssuer = true,
-         ValidIssuer = builder.Configuration["Jwt:Issuer"],
-
-         ValidateAudience = true,
-         ValidAudiences = new[]
-         {
-             builder.Configuration["Jwt:AudienceWeb"],   // اقبل الويب
-             builder.Configuration["Jwt:AudienceMobile"] // واقبل الموبايل
-         },
-
-         ValidateLifetime = true,
-         ValidateIssuerSigningKey = true,
-         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
-     };
-     options.Events = new JwtBearerEvents
-     {
-         OnAuthenticationFailed = context =>
-         {
-             Console.WriteLine($"🔥🔥🔥 Exception: {context.Exception.Message}");
-             return Task.CompletedTask;
-         },
-         OnTokenValidated = context =>
-         {
-             Console.WriteLine("🟢🟢🟢 ALHAMDULLILAH! Token Worked! 🟢🟢🟢");
-             return Task.CompletedTask;
-         },
-         OnChallenge = context =>
-         {
-             Console.WriteLine("🟠 OnChallenge Error: " + context.Error + " - " + context.ErrorDescription);
-             return Task.CompletedTask;
-         }
-     };
- });
-
-
-
-
-builder.Services.AddAuthorization(options => {
-
-});
-
-
-builder.Services.AddHttpLogging(options =>
+.AddJwtBearer(options =>
 {
-    options.LoggingFields =
-    Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestProperties |
-    Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.ResponsePropertiesAndHeaders;
+    options.TokenValidationParameters = new TokenValidationParameters()
+    {
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidateAudience = true,
+        ValidAudiences = new[]
+        {
+            builder.Configuration["Jwt:AudienceWeb"],
+            builder.Configuration["Jwt:AudienceMobile"]
+        },
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine($"Authentication Failed: {context.Exception.Message}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            return Task.CompletedTask;
+        }
+    };
 });
 
-
-
-builder.Services.AddScoped<IUserLogService, UserLogService>();
-
-
+// ==========================================
+// 4. بناء التطبيق والـ Middleware
+// ==========================================
 var app = builder.Build();
 
+// تهيئة البيانات (Seeding) - فعلناها عشان الاختبار
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-
     try
     {
-        var userManager = services.GetRequiredService<UserManager<User>>();
-        var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
-        var config = services.GetRequiredService<IConfiguration>();
-
-        // 👇 شيلنا الـ Comment من هنا
-        await DbInitializer.SeedAdminUser(userManager, roleManager, config);
+        // لو عايز تشغل الـ Seeder بتاع التصنيفات، شيل الـ Comment ده 👇
+        // var context = services.GetRequiredService<HayyContext>();
+        // await DataSeeder.SeedAsync(context);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
+        logger.LogError(ex, "Error during database seeding.");
     }
 }
-app.UseExceptionHandlingMiddleware();
-app.UseHttpLogging();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseHsts();
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-app.UseCors("AllowClient");// 3. تفعيل الـ CORS
 
-
-
+// الترتيب مهم جداً
+app.UseCors("AllowClient");
 app.UseAuthentication();
 app.UseAuthorization();
-// 👇 السطر ده هو اللي بيفتح قناة الاتصال للفرونت إند
-app.MapHub<NotificationHub>("/notificationHub");
 
+// نقاط النهاية (Endpoints)
+app.MapHub<NotificationHub>("/notificationHub");
 app.MapControllers();
 
 app.Run();

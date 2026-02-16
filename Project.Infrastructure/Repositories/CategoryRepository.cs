@@ -8,11 +8,24 @@ using System.Text;
 
 namespace Project.Infrastructure.Repositories
 {
-    public class CategoryRepository : ICategoryRepository
+    public class CategoryRepository : GenericRepository<Category>, ICategoryRepository
     {
-        private readonly HayyContext _context;
+       
 
-        public CategoryRepository(HayyContext context)
+        public async Task<Category?> GetByIdWithTagsAsync(Guid id)
+        {
+            return await _context.Categories
+                .Include(c => c.CategoryTags)      // هات جدول الربط
+                    .ThenInclude(ct => ct.Tag)     // ومنه هات الوسم نفسه
+                .FirstOrDefaultAsync(c => c.Id == id);
+        }
+
+       
+   
+
+  private readonly HayyContext _context;
+
+        public CategoryRepository(HayyContext context) : base(context)
         {
             _context = context;
         }
