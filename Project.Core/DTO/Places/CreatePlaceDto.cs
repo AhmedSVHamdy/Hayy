@@ -23,6 +23,8 @@ namespace Project.Core.DTO.Places
 
         [Required(ErrorMessage = "التصنيف مطلوب")]
         public Guid CategoryId { get; set; }
+        //البزنس مربوط مع المكان
+        public Guid BusinessId { get; set; }
 
         // قائمة بمعرفات الوسوم (Tags)
         public List<Guid> TagIds { get; set; } = new List<Guid>();
