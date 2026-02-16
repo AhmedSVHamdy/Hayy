@@ -39,6 +39,13 @@ namespace Project.Core
             services.AddScoped<IImageService, ImageService>();
             services.AddScoped<IInterestService, InterestService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IPlaceService, PlaceService>();
+            services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IBusinessPostService, BusinessPostService>();
+            services.AddScoped<IPostCommentService, PostCommentService>();
+            services.AddScoped<IPostLikeService, PostLikeService>();
+            services.AddScoped<IUserLogService, UserLogService>();
 
             services.AddScoped<IBusinessService, BusinessService>();
 
@@ -55,6 +62,10 @@ namespace Project.Core
             services.AddAutoMapper(cfg => cfg.AddProfile<LikeProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<NotificationProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<UserLogProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<CategoryProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<PlaceProfile>());
+
+
             return services;
         }
     }
