@@ -8,6 +8,7 @@ using Project.Core.DTO;
 using Project.Core.Mappers;
 using Project.Core.ServiceContracts;
 using Project.Core.Services;
+using Project.Core.Settings;
 using Project.Core.Validators;
 using System.Reflection;
 
@@ -25,6 +26,7 @@ namespace Project.Core
 
             });
             services.AddValidatorsFromAssemblyContaining<ChangePasswordValidator>();
+            
 
             // 2. إعدادات الإيميل
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
@@ -50,6 +52,8 @@ namespace Project.Core
             services.AddScoped<IBusinessService, BusinessService>();
 
             services.AddScoped<IAdminService, AdminService>();
+            // تسجيل خدمة الدفع (PaymentService)
+            services.AddHttpClient<IPaymentService, PaymentService>();
 
 
             // 2. تفعيل FluentValidation

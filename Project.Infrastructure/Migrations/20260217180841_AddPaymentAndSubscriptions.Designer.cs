@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Project.Infrastructure.ApplicationDbContext;
 
@@ -11,9 +12,11 @@ using Project.Infrastructure.ApplicationDbContext;
 namespace Project.Infrastructure.Migrations
 {
     [DbContext(typeof(HayyContext))]
-    partial class HayyContextModelSnapshot : ModelSnapshot
+    [Migration("20260217180841_AddPaymentAndSubscriptions")]
+    partial class AddPaymentAndSubscriptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -743,9 +746,6 @@ namespace Project.Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("BusinessId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid?>("BusinessPlanId")
                         .HasColumnType("uniqueidentifier");
 
@@ -766,9 +766,6 @@ namespace Project.Infrastructure.Migrations
 
                     b.Property<long?>("PaymobTransactionId")
                         .HasColumnType("bigint");
-
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Status")
                         .IsRequired()

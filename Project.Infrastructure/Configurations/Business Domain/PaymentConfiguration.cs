@@ -1,37 +1,53 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Project.Core.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Project.Core.Domain.Entities; // تأكد من الـ Namespace بتاعك
 
 namespace Project.Infrastructure.Configuration
 {
-    internal class PaymentConfiguration : IEntityTypeConfiguration<Payment>
+    public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
     {
         public void Configure(EntityTypeBuilder<Payment> builder)
         {
+            // اسم الجدول
+           // builder.ToTable("Payments");
+
             // Primary Key
             builder.HasKey(x => x.Id);
-            // Properties Configuration
+
+            // التعامل مع الفلوس (مهم جداً عشان ميعملش تقريب غلط)
             builder.Property(x => x.Amount)
-               .IsRequired()
-               .HasColumnType("decimal(18,2)");
+                   .IsRequired()
+                   .HasColumnType("decimal(18,2)"); // 18 رقم، منهم 2 عشري
 
-            builder.Property(x => x.Method)
-               .HasConversion<string>()
-               .HasMaxLength(50)
-               .IsRequired();
+            // العملة
+            builder.Property(x => x.Currency)
+                   .HasMaxLength(3) // EGP, USD
+                   .HasDefaultValue("EGP");
 
-            builder.Property(x => x.TransactionId)
-               .HasMaxLength(100)
-               .IsRequired();
+            // حالة الدفع (Success, Pending, Failed)
+            // لو انت عاملها Enum استخدم HasConversion<string>()
+            builder.Property(x => x.Status)
+                   .HasMaxLength(20)
+                   .IsRequired();
 
-            // Relationships Configuration
-            builder.HasOne(x => x.BusinessPlan)
-               .WithMany(x => x.Payments) // الربط مع القائمة الموجودة في BusinessPlan
-               .HasForeignKey(x => x.BusinessPlanId) // تحديد مفتاح الربط الصريح
-               .OnDelete(DeleteBehavior.Restrict);
+            // طريقة الدفع (Visa, Wallet)
+            builder.Property(x => x.PaymentMethod)
+                   .HasMaxLength(50);
+
+            // 🔴 أعمدة Paymob (مهمة جداً)
+            // عملناها Optional عشان وانت بتنشأ الريكويست لسه ميكونش جالك الرد
+            builder.Property(x => x.PaymobOrderId)
+                   .IsRequired(false);
+
+            builder.Property(x => x.PaymobTransactionId)
+                   .IsRequired(false);
+
+            // العلاقات Relationships
+            // كل عملية دفع مربوطة باشتراك (اختياري، لأن ممكن دفع لسبب تاني غير الاشتراك)
+            builder.HasOne(x => x.Subscription)
+                   .WithMany(s => s.Payments)
+                   .HasForeignKey(x => x.SubscriptionId)
+                   .OnDelete(DeleteBehavior.Restrict); // عشان لو مسحت الاشتراك سجل الدفع ميتمسحش (أرشيف)
         }
     }
 }

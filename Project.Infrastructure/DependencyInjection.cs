@@ -12,6 +12,7 @@ using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.Domain.RopositoryContracts;
 using Project.Core.ServiceContracts; // عشان INotifier
+using Project.Core.Settings;
 using Project.Infrastructure.ApplicationDbContext;
 using Project.Infrastructure.Repositories;
 using Project.Infrastructure.SignalR;
@@ -87,6 +88,7 @@ namespace Project.Infrastructure
             // ====================================================
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            
 
             services.AddScoped<IUserLogRepository, UserLogRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
@@ -100,9 +102,11 @@ namespace Project.Infrastructure
             services.AddScoped<IPostCommentRepository, PostCommentRepository>();
             services.AddScoped<IPostLikeRepository, PostLikeRepository>();
 
+
             // ====================================================
             // 5. Infrastructure Services (الخدمات المرتبطة بالبنية التحتية فقط)
             // ====================================================
+            services.Configure<PaymobSettings>(configuration.GetSection("Paymob"));
 
             // SignalRNotifier يعتمد على HubContext الموجود هنا، لذلك يبقى هنا
             services.AddScoped<INotifier, SignalRNotifier>();

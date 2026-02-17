@@ -18,6 +18,7 @@ namespace Project.Infrastructure.Configuration
             builder.Property(X => X.Name)
                 .IsRequired()
                 .HasMaxLength(100);
+
            builder.Property(X => X.Price)
             .HasColumnType("decimal(18,2)") 
             .IsRequired();
@@ -32,6 +33,9 @@ namespace Project.Infrastructure.Configuration
             builder.Property(x => x.AiPowerLevel)
                .IsRequired()
                .HasDefaultValue(0);
+
+            builder.Property(x => x.IsActive)
+                   .HasDefaultValue(true);
 
             // Relationships Configuration
             builder.HasMany(x => x.BusinessPlans)
