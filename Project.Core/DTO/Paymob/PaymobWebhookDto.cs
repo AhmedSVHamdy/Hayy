@@ -15,7 +15,7 @@ namespace Project.Core.DTOs.Paymob
         public PaymobTransactionData Obj { get; set; } // تفاصيل العملية
 
         [JsonPropertyName("hmac")]
-        public string Hmac { get; set; } // التوقيع الأمني
+        public string? Hmac { get; set; } // التوقيع الأمني
     }
 
     public class PaymobTransactionData
@@ -43,6 +43,35 @@ namespace Project.Core.DTOs.Paymob
 
         [JsonPropertyName("source_data")]
         public PaymobSourceData SourceData { get; set; }
+        [JsonPropertyName("has_parent_transaction")]
+        public bool HasParentTransaction { get; set; }
+
+        [JsonPropertyName("integration_id")]
+        public long IntegrationId { get; set; }
+
+        [JsonPropertyName("is_3d_secure")]
+        public bool Is3dSecure { get; set; }
+
+        [JsonPropertyName("is_auth")]
+        public bool IsAuth { get; set; }
+
+        [JsonPropertyName("is_capture")]
+        public bool IsCapture { get; set; }
+
+        [JsonPropertyName("is_refunded")]
+        public bool IsRefunded { get; set; }
+
+        [JsonPropertyName("is_standalone_payment")]
+        public bool IsStandalonePayment { get; set; }
+
+        [JsonPropertyName("is_voided")]
+        public bool IsVoided { get; set; }
+
+        [JsonPropertyName("owner")]
+        public long Owner { get; set; }
+
+        [JsonPropertyName("pending")]
+        public bool Pending { get; set; }
     }
 
     public class PaymobOrderData
@@ -53,13 +82,13 @@ namespace Project.Core.DTOs.Paymob
 
     public class PaymobSourceData
     {
-        [JsonPropertyName("type")]
-        public string Type { get; set; }
+        [JsonPropertyName("pan")]
+        public string? Pan { get; set; }
 
         [JsonPropertyName("sub_type")]
-        public string SubType { get; set; }
+        public string? SubType { get; set; }
 
-        [JsonPropertyName("pan")]
-        public string Pan { get; set; }
+        [JsonPropertyName("type")]
+        public string? Type { get; set; }
     }
 }

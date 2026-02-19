@@ -146,23 +146,33 @@ namespace Project.Core.Services
 
             // ترتيب البيانات ده إجباري من Paymob
             string concatenatedString =
-                data.AmountCents.ToString() +
-                data.CreatedAt +
-                data.Currency +
-                data.ErrorOccured.ToString().ToLower() +
-                data.Id.ToString() +
-                data.Order.Id.ToString() +
-                data.Success.ToString().ToLower() +
-                data.SourceData.Pan +
-                data.SourceData.SubType +
-                data.SourceData.Type;
+               data.AmountCents.ToString() +
+               data.CreatedAt +
+               data.Currency +
+               (data.ErrorOccured ? "true" : "false") +
+               (data.HasParentTransaction ? "true" : "false") +
+               data.Id.ToString() +
+               data.IntegrationId.ToString() +
+               (data.Is3dSecure ? "true" : "false") +
+               (data.IsAuth ? "true" : "false") +
+               (data.IsCapture ? "true" : "false") +
+               (data.IsRefunded ? "true" : "false") +
+               (data.IsStandalonePayment ? "true" : "false") +
+               (data.IsVoided ? "true" : "false") +
+               data.Order.Id.ToString() +
+               data.Owner.ToString() +
+               (data.Pending ? "true" : "false") +
+               data.SourceData.Pan +
+               data.SourceData.SubType +
+               data.SourceData.Type +
+               (data.Success ? "true" : "false");
 
-            using (var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(_settings.HmacSecret)))
+            using (var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(_settings.HmacSecret.Trim())))
             {
                 var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(concatenatedString));
                 var calculatedHmac = BitConverter.ToString(hash).Replace("-", "").ToLower();
 
-                return calculatedHmac == dto.Hmac;
+                return calculatedHmac.Equals(dto.Hmac, StringComparison.OrdinalIgnoreCase);
             }
         }
 
@@ -202,19 +212,12 @@ namespace Project.Core.Services
                 BillingData = new PaymobBillingData
                 {
                     // بيانات وهمية (يفضل تغييرها ببيانات حقيقية من جدول البيزنس لو متاحة)
-                    FirstName = "Client",
-                    LastName = "Name",
-                    Email = "client@test.com",
-                    PhoneNumber = "01000000000",
-                    Apartment = "NA",
-                    Floor = "NA",
-                    Street = "NA",
-                    Building = "NA",
-                    ShippingMethod = "NA",
-                    PostalCode = "NA",
-                    City = "NA",
-                    Country = "NA",
-                    State = "NA"
+                    Country = "EG", // أهم حاجة دي تكون EG مش NA
+                    City = "Cairo",
+                    FirstName = "Mohamed",
+                    LastName = "Test",
+                    PhoneNumber = "+201012345678",
+                    Email = "test@test.com",
                 },
                 Currency = "EGP",
                 IntegrationId = _settings.IntegrationId

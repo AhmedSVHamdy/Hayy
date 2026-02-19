@@ -47,7 +47,7 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 // لو حصل خطأ في الـ Logic (زي HMAC غلط)، بنسجله عندنا (Logging)
-                // Console.WriteLine(ex.Message);
+                 Console.WriteLine(ex.Message);
             }
 
             // ⚠️ قاعدة ذهبية:
