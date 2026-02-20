@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
-using FluentValidation; 
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.Entities.NotificationPayload;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
+using Project.Core.Helpers; // تأكد من الـ Namespace ده
 using Project.Core.ServiceContracts;
 using System.Text.Json;
 
@@ -14,41 +14,49 @@ namespace Project.Core.Services
         private readonly INotificationRepository _repo;
         private readonly IMapper _mapper;
         private readonly INotifier _notifier; // SignalR
+        private readonly IUnitOfWork _unitOfWork; 
+
 
         public NotificationService(
             INotificationRepository repo,
             IMapper mapper,
-            INotifier notifier) // بنستلم الفاليداتور
+            INotifier notifier,
+            IUnitOfWork unitOfWork)
         {
             _repo = repo;
             _mapper = mapper;
             _notifier = notifier;
+            _unitOfWork = unitOfWork;
         }
 
         // =========================================================
-        // 1. إنشاء إشعار (مع Validation + Grouping)
+        // 1. إنشاء إشعار (مع Grouping Logic)
         // =========================================================
         public async Task<NotificationResponse> CreateNotification(NotificationAddRequest request)
         {
-            
+            var userSettings = await _unitOfWork.GetRepository<UserSettings>()
+        .GetAsync(s => s.UserId == request.UserId);
+
+            // إذا كان المستخدم قد عطل الإشعارات تماماً، يمكننا التوقف هنا أو إكمال التسجيل فقط بدون إرسال
+            bool isNotificationEnabled = userSettings?.NotificationsEnabled ?? true;
             Notification notification;
             Notification? existingNotification = null;
 
+            // 1. التحقق من وجود GroupKey (تجميع الإشعارات)
             if (!string.IsNullOrEmpty(request.GroupKey))
             {
+                // الدالة دي موجودة في الريبو الجديد ✅
                 existingNotification = await _repo.GetUnreadByGroupKeyAsync(request.UserId, request.GroupKey);
             }
 
             if (existingNotification != null)
             {
                 // --- A) حالة التحديث (Update Existing) ---
-
-                // فك التشفير (Deserialize) عشان نحدث العداد
                 var dataHelper = !string.IsNullOrEmpty(existingNotification.Payload)
                     ? JsonSerializer.Deserialize<NotificationData>(existingNotification.Payload)
                     : new NotificationData();
 
-                // تحديث العداد والأسماء
+                // تحديث البيانات
                 int newCount = (dataHelper?.ItemCount ?? 1) + 1;
                 string newActorName = request.Data?.UserName ?? "مستخدم";
 
@@ -56,17 +64,16 @@ namespace Project.Core.Services
                 {
                     dataHelper.ItemCount = newCount;
                     dataHelper.UserName = newActorName;
-                    // لو جاي صورة جديدة خدها، لو لأ خلي القديمة
                     if (!string.IsNullOrEmpty(request.Data?.UserImage))
                         dataHelper.UserImage = request.Data.UserImage;
                 }
 
-                // تحديث نصوص الإشعار
-                existingNotification.Title = request.Title; // تحديث العنوان بآخر حدث
+                // تحديث الحقول
+                existingNotification.Title = request.Title;
                 existingNotification.Message = $"{newActorName} و {newCount - 1} آخرون تفاعلوا معك";
                 existingNotification.CreatedAt = DateTime.UtcNow; // رفعه للأحدث
-                existingNotification.IsRead = false; // نخليه غير مقروء تاني عشان ينبه اليوزر
-                existingNotification.Payload = JsonSerializer.Serialize(dataHelper); // حفظ الداتا الجديدة
+                existingNotification.IsRead = false; // تنبيه جديد
+                existingNotification.Payload = JsonSerializer.Serialize(dataHelper);
 
                 await _repo.UpdateAsync(existingNotification);
                 notification = existingNotification;
@@ -74,108 +81,85 @@ namespace Project.Core.Services
             else
             {
                 // --- B) حالة الإنشاء الجديد (Create New) ---
-
-                // نضبط العداد بـ 1 قبل المابينج
                 if (request.Data != null) request.Data.ItemCount = 1;
 
                 notification = _mapper.Map<Notification>(request);
-                // المابر هنا هيقوم بالواجب ويحول الـ Data لـ JSON String أوتوماتيك (حسب الـ Profile اللي عملناه)
-
                 notification.CreatedAt = DateTime.UtcNow;
+
+                // إضافة للداتابيز
                 await _repo.AddAsync(notification);
             }
 
-            // 🛑 3. التحويل والرد (Response)
+            // 2. التحويل والرد (Mapping)
             var response = _mapper.Map<NotificationResponse>(notification);
 
-            // 🛑 4. إرسال Real-Time (SignalR) 📡
-            try
+            // 3. إرسال Real-Time (SignalR) 📡
+            if (isNotificationEnabled)
             {
-                await _notifier.SendToUserAsync(request.UserId, response);
-            }
-            catch (Exception)
-            {
-                // بنعمل Catch عشان لو السوكيت واقع، الداتابيز متتأثرش وتكمل عادي
+                try
+                {
+                    await _notifier.SendToUserAsync(request.UserId, response);
+                }
+                catch (Exception) { /* تجاهل أخطاء السوكيت */ }
             }
 
             return response;
         }
 
         // =========================================================
-        // 2. جلب إشعارات المستخدم
+        // 2. جلب إشعارات المستخدم (Paged)
         // =========================================================
-        public async Task<List<NotificationResponse>> GetUserNotifications(Guid userId)
+        public async Task<PagedResult<NotificationResponse>> GetUserNotificationsPaged(Guid userId, int pageNumber, int pageSize)
         {
-            var notifications = await _repo.GetByUserIdAsync(userId);
-            return _mapper.Map<List<NotificationResponse>>(notifications);
+            // تنظيف المدخلات
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 10;
+            if (pageSize > 50) pageSize = 50;
+
+            // جلب البيانات (بالاسم الجديد في الريبو) ✅
+            var notifications = await _repo.GetByUserIdPagedAsync(userId, pageNumber, pageSize);
+
+            // جلب العدد الكلي (بالاسم الجديد في الريبو) ✅
+            var totalCount = await _repo.GetTotalCountAsync(userId);
+
+            // التحويل
+            var dtos = _mapper.Map<List<NotificationResponse>>(notifications);
+
+            return new PagedResult<NotificationResponse>(dtos, totalCount, pageNumber, pageSize);
         }
 
         // =========================================================
-        // 3. قراءة إشعار واحد
+        // 3. قراءة إشعار واحد (Mark As Read)
         // =========================================================
         public async Task MarkAsReadAsync(Guid notificationId, Guid userId)
         {
-            var notification = await _repo.GetByIdAsync(notificationId);
+            int rowsAffected = await _repo.MarkAsReadAsync(notificationId, userId);
 
-            // 2. هنا بقى "التأمين": نتأكد إن الإشعار موجود فعلاً ومملوك للمستخدم اللي باعت الطلب
-            if (notification != null && notification.UserId == userId)
+            if (rowsAffected == 0)
             {
-                if (!notification.IsRead)
-                {
-                    notification.IsRead = true;
-                    await _repo.UpdateAsync(notification);
-                }
+                // 🚨 هنا المشكلة!
+                // لو دخلنا هنا، يبقى الداتابيز بتقول: "أنا مش لاقيه إشعار بالـ ID ده لليوزر ده"
+                throw new KeyNotFoundException($"فشل التعديل! الإشعار {notificationId} غير موجود أو لا يخص المستخدم {userId}");
             }
         }
 
         // =========================================================
-        // 4. قراءة كل الإشعارات
+        // 4. قراءة الكل (Mark All As Read) - Optimized 🚀
         // =========================================================
         public async Task MarkAllAsReadAsync(Guid userId)
         {
-            var unreadNotifications = await _repo.GetUnreadByUserIdAsync(userId);
-
-            if (unreadNotifications != null && unreadNotifications.Any())
-            {
-                foreach (var note in unreadNotifications)
-                {
-                    note.IsRead = true;
-                }
-                await _repo.UpdateRangeAsync(unreadNotifications);
-            }
+            // استخدام الدالة السريعة المباشرة في الريبو ✅
+            // بدلاً من اللوب القديم (UpdateRangeAsync)
+            await _repo.MarkAllAsReadAsync(userId);
         }
 
         // =========================================================
-        // 5. عداد الإشعارات غير المقروءة
+        // 5. العداد (Unread Count)
         // =========================================================
         public async Task<int> GetUnreadCountAsync(Guid userId)
         {
-            return await _repo.CountUnreadAsync(userId);
+            // بالاسم الجديد المتطابق ✅
+            return await _repo.GetUnreadCountAsync(userId);
         }
-
-        public async Task<PagedResult<NotificationResponse>> GetUserNotificationsPaged(Guid userId, int pageNumber, int pageSize)
-        {
-            // 1. تنظيف المدخلات (عشان لو الفرونت بعت أرقام غلط)
-            if (pageNumber <= 0) pageNumber = 1;
-            if (pageSize <= 0) pageSize = 10;
-            // ممكن تحط حد أقصى للـ pageSize عشان محدش يطلب 1000 مرة واحدة
-            if (pageSize > 50) pageSize = 50;
-
-            // 2. جلب البيانات (الصفحة المطلوبة فقط)
-            // ملاحظة: تأكد إنك ضفت دالة GetByUserIdPagedAsync في الريبوزيتوري
-            var notifications = await _repo.GetByUserIdPagedAsync(userId, pageNumber, pageSize);
-
-            // 3. جلب العدد الكلي للإشعارات (عشان نحسب عدد الصفحات)
-            // ملاحظة: تأكد إنك ضفت دالة GetCountByUserIdAsync في الريبوزيتوري
-            var totalCount = await _repo.GetCountByUserIdAsync(userId);
-
-            // 4. تحويل البيانات لـ DTO
-            var notificationDtos = _mapper.Map<List<NotificationResponse>>(notifications);
-
-            // 5. تجميع كله في الغلاف (PagedResult) وإرجاعه
-            return new PagedResult<NotificationResponse>(notificationDtos, totalCount, pageNumber, pageSize);
-        }
-
-
     }
 }

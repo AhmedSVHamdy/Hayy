@@ -10,6 +10,7 @@
         Search = 5,
         Book = 6,
         Review = 7,
-        Post = 8
+        Post = 8,
+        Reply=9,
     }
 }

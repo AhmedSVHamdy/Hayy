@@ -10,6 +10,6 @@ namespace Project.Core.ServiceContracts
     {
         Task<CommentResponseDto> AddCommentAsync(CreateCommentDto createPostCommentDto);
         Task<IEnumerable<CommentResponseDto>> GetCommentsByPostIdAsync(Guid postId);
-        
+        Task<PagedResult<CommentResponseDto>> GetCommentsByPostIdPagedAsync(Guid postId, int pageNumber, int pageSize);
     }
 }

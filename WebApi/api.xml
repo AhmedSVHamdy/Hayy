@@ -266,6 +266,61 @@
             routing under the 'api/[controller]' route. All actions require valid input models and return appropriate HTTP
             status codes based on the operation outcome.</remarks>
         </member>
+        <member name="M:WebApi.Controllers.BusinessPostsController.CreatePost(Project.Core.DTO.CerateBusinessPostDto.CreatePostDto)">
+            <summary>
+            Creates a new post for the specified place using the provided post data.
+            </summary>
+            <remarks>The authenticated user's ID is automatically assigned to the post. The method
+            requires a valid authentication token. The response includes a link to retrieve posts for the place
+            associated with the created post.</remarks>
+            <param name="dto">The data transfer object containing the details of the post to create. Must include valid post information;
+            the user ID is assigned from the authenticated user's token.</param>
+            <returns>An IActionResult indicating the outcome of the operation. Returns 201 Created with the created post if
+            successful; 401 Unauthorized if the user token is invalid; 404 Not Found if the place does not exist; 403
+            Forbidden if the user does not own the place; or 400 Bad Request for other errors.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.BusinessPostsController.GetPlacePosts(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of posts associated with the specified place.
+            </summary>
+            <remarks>Supports pagination to efficiently retrieve large sets of posts. Use the <paramref
+            name="pageNumber"/> and <paramref name="pageSize"/> parameters to control paging.</remarks>
+            <param name="placeId">The unique identifier of the place for which to retrieve posts.</param>
+            <param name="pageNumber">The page number to retrieve. Must be greater than or equal to 1. Defaults to 1.</param>
+            <param name="pageSize">The number of posts to include in each page. Must be greater than 0. Defaults to 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a paged result of posts for the specified place.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.CommentsController.AddComment(Project.Core.DTO.CeratePostComment.CreateCommentDto)">
+            <summary>
+            Creates a new comment for a post using the specified comment data.
+            </summary>
+            <remarks>The user must be authenticated to add a comment. The user identifier is automatically
+            set based on the current user's authentication token.</remarks>
+            <param name="dto">The data transfer object containing the details of the comment to add. Must include the comment content and
+            the associated post identifier.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> that represents the result of the operation. Returns a 200 OK response with
+            the created comment data if successful, or a 401 Unauthorized response if the user is not authenticated.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.CommentsController.GetPostComments(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of comments for the specified post.
+            </summary>
+            <param name="postId">The unique identifier of the post for which to retrieve comments.</param>
+            <param name="pageNumber">The page number of results to retrieve. Must be greater than or equal to 1. The default is 1.</param>
+            <param name="pageSize">The number of comments to include on each page. Must be greater than 0. The default is 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a paged result of comments for the specified post.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.LikesController.ToggleLike(Project.Core.DTO.CeratePostLike.ToggleLikeDto)">
+            <summary>
+            Toggles the like status for a post on behalf of the authenticated user.
+            </summary>
+            <remarks>The user must be authenticated to toggle the like status. The method will like the post
+            if it is not already liked by the user, or unlike it if it is currently liked.</remarks>
+            <param name="dto">An object containing the post identifier and any additional data required to toggle the like status.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> indicating the result of the operation. Returns 200 OK with the updated like
+            status if successful; 401 Unauthorized if the user is not authenticated; 404 Not Found if the post does not
+            exist; or 400 Bad Request if an error occurs.</returns>
+        </member>
         <member name="M:WebApi.Controllers.NotificationsController.Create(Project.Core.DTO.NotificationAddRequest)">
             <summary>
             Creates a new notification based on the specified request data.
@@ -309,6 +364,49 @@
             <remarks>This action applies to all notifications associated with the authenticated user. The
             response does not include the updated notification list.</remarks>
             <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.OkObjectResult"/> containing a confirmation message if the operation succeeds.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.PlaceFollowsController.ToggleFollow(Project.Core.DTO.CeratePlaceFollow.TogglePlaceFollowDto)">
+            <summary>
+            عمل متابعة أو إلغاء متابعة لمكان (Toggle)
+            </summary>
+        </member>
+        <member name="M:WebApi.Controllers.PlaceFollowsController.GetFollowersByPlaceId(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            جلب كل المتابعين لمكان معين (بالباجينيشن)
+            </summary>
+        </member>
+        <member name="M:WebApi.Controllers.PlaceFollowsController.GetFollowedPlacesByUser(System.Int32,System.Int32)">
+            <summary>
+            جلب كل الأماكن اللي اليوزر الحالي بيتابعها (بالباجينيشن)
+            </summary>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewRepliesController.AddReply(Project.Core.DTO.CreateReviewReplyDTO.CreateReviewReplyDto)">
+            <summary>
+            Adds a reply to an existing review using the specified reply data.
+            </summary>
+            <remarks>The user must be authenticated to add a reply. The replier's user ID is automatically
+            set based on the authenticated user.</remarks>
+            <param name="dto">The data transfer object containing the details of the reply to add. Must include the review identifier and
+            reply content.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> that represents the result of the operation. Returns a 200 OK response with
+            the created reply data if successful.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewRepliesController.GetReplies(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of replies associated with the specified review.
+            </summary>
+            <param name="reviewId">The unique identifier of the review for which to retrieve replies.</param>
+            <param name="page">The page number of the results to retrieve. Must be greater than or equal to 1. The default value is 1.</param>
+            <param name="size">The number of replies to include per page. Must be greater than 0. The default value is 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the paginated list of replies for the specified review.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewRepliesController.DeleteReply(System.Guid)">
+            <summary>
+            Deletes the specified reply for the authenticated user.
+            </summary>
+            <param name="id">The unique identifier of the reply to delete.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> that represents the result of the delete operation. Returns a 204 No Content
+            response if the deletion is successful.</returns>
         </member>
         <member name="T:WebApi.Controllers.ReviewsController">
             <summary>

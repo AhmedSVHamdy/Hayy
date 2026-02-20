@@ -198,5 +198,6 @@ namespace Project.Core.Services
                 notes: reviewDto.IsApproved ? "Business Approved" : $"Rejected: {reviewDto.Reason}"
             );
         }
+
     }
 }

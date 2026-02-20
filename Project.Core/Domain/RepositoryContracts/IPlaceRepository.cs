@@ -12,5 +12,7 @@ namespace Project.Core.Domain.RepositoryContracts
 
         // دالة تجيب كل الأماكن بالتفاصيل (ممكن نستخدمها في الـ Home)
         Task<IEnumerable<Place>> GetAllWithDetailsAsync();
+
+        Task UpdatePlaceRatingAsync(Guid placeId);
     }
 }

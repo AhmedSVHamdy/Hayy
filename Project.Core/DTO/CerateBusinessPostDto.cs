@@ -30,6 +30,7 @@ namespace Project.Core.DTO
             public string PlaceImage { get; set; } // لوجو المطعم
             public int LikesCount { get; set; }   // عدد اللايكات
             public int CommentsCount { get; set; } // عدد الكومنتات
+            public Guid PlaceId { get; set; }
         }
     }
 }

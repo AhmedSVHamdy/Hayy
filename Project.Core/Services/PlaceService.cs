@@ -38,10 +38,19 @@ namespace Project.Core.Services
             var category = await _categoryRepo.GetByIdAsync(dto.CategoryId);
             if (category == null)
                 throw new Exception("التصنيف غير موجود");
+            
 
             // 2. التحويل
             var place = _mapper.Map<Place>(dto);
             place.Id = Guid.NewGuid();
+            place.IsActive = true;
+
+            
+
+            // 👇 السطر اللي بيكشف المستور
+            // اطبع القيمة دي في الـ Console قبل الحفظ مباشرة
+            await _placeRepo.AddAsync(place);
+            await _unitOfWork.SaveChangesAsync();
 
             // 3. إضافة الوسوم (Tags Logic)
             if (dto.TagIds != null && dto.TagIds.Any())

@@ -23,5 +23,7 @@ namespace Project.Core.Domain.RepositoryContracts
 
         // 5. دالة التحقق من التكرار
         Task<bool> HasUserReviewedPlaceAsync(Guid userId, Guid placeId);
+
+        Task<Review?> GetReviewByIdAsync(Guid id);
     }
 }

@@ -1017,6 +1017,36 @@ namespace Project.Infrastructure.Migrations
                     b.ToTable("Reviews", (string)null);
                 });
 
+            modelBuilder.Entity("Project.Core.Domain.Entities.ReviewReply", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ReplierId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReplyText")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewId");
+
+                    b.ToTable("ReviewReplies", (string)null);
+                });
+
             modelBuilder.Entity("Project.Core.Domain.Entities.SubscriptionPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1687,6 +1717,17 @@ namespace Project.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Project.Core.Domain.Entities.ReviewReply", b =>
+                {
+                    b.HasOne("Project.Core.Domain.Entities.Review", "Review")
+                        .WithMany("ReviewReplies")
+                        .HasForeignKey("ReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Review");
+                });
+
             modelBuilder.Entity("Project.Core.Domain.Entities.UserInterestProfile", b =>
                 {
                     b.HasOne("Project.Core.Domain.Entities.User", "User")
@@ -1777,6 +1818,11 @@ namespace Project.Infrastructure.Migrations
             modelBuilder.Entity("Project.Core.Domain.Entities.PostComment", b =>
                 {
                     b.Navigation("Replies");
+                });
+
+            modelBuilder.Entity("Project.Core.Domain.Entities.Review", b =>
+                {
+                    b.Navigation("ReviewReplies");
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.SubscriptionPlan", b =>

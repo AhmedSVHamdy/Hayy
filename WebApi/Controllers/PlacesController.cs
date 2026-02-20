@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Project.Core.Domain.Entities;
 using Project.Core.DTO.Places;
+using Project.Core.Helpers;
 using Project.Core.ServiceContracts;
 
 namespace WebApi.Controllers

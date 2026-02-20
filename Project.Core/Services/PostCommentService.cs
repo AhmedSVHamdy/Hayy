@@ -18,15 +18,15 @@ namespace Project.Core.Services
         private readonly IMapper _mapper;
         private readonly INotifier _notifier;
         private readonly IUserLogService _userLogService;
-        //private readonly IPlaceRepository _placeRepository;
-        public PostCommentService(IPostCommentRepository postCommentRepository, IBusinessPostRepository businessPostRepository, IMapper mapper, INotifier notifier, IUserLogService userLogService)//IPlaceRepository placeRepository,
+        private readonly IPlaceRepository _placeRepository;
+        public PostCommentService(IPostCommentRepository postCommentRepository, IBusinessPostRepository businessPostRepository, IMapper mapper, INotifier notifier, IUserLogService userLogService, IPlaceRepository placeRepository)
         {
             _postCommentRepository = postCommentRepository;
             _businessPostRepository = businessPostRepository;
             _mapper= mapper;
             _notifier = notifier;
             _userLogService = userLogService;
-            //_placeRepository = placeRepository;
+            _placeRepository = placeRepository;
         }
         public async Task<CommentResponseDto> AddCommentAsync(CreateCommentDto dto)
         {
@@ -68,12 +68,12 @@ namespace Project.Core.Services
             // محتاجين نعرف البوست ده تبع مطعم إيه عشان نبعت لصاحب المطعم
             // (ممكن تحتاج دالة في PostRepo تجيب البوست بالـ ID)
             // هنفترض إننا بنبعت للجروب بتاع البوست نفسه عشان لو فيه يوزرز متابعين البوست
-            await _notifier.SendNotificationToGroup(
+            await _notifier.SendNotificationToUser(
                 dto.PostId.ToString(),
                 $"💬 تعليق جديد: {dto.Content}"
             );
 
-
+            Guid categoryId = post.Place != null ? post.Place.CategoryId : Guid.Empty;
             // 4. Mongo Log (AI) 🧠
             var logDto = new CreateUserLogDto
             {
@@ -81,9 +81,9 @@ namespace Project.Core.Services
                 ActionType = ActionType.Comment, // تأكد إنها موجودة في الـ Enum (رقم 2)
                 TargetType = TargetType.Post,    // ضيف Post في TargetType Enum
                 TargetId = dto.PostId,
-                SearchQuery = dto.Content,
+                Details = dto.Content,
                 Duration = 0,
-                // CategoryId = post?.CategoryId,
+                CategoryId = categoryId,
             };
             await _userLogService.LogActivityAsync(logDto);
 
@@ -92,12 +92,25 @@ namespace Project.Core.Services
 
         }
 
-        
-
         public async Task<IEnumerable<CommentResponseDto>> GetCommentsByPostIdAsync(Guid postId)
         {
             var comments = await _postCommentRepository.GetCommentsByPostIdAsync(postId);
             return _mapper.Map<IEnumerable<CommentResponseDto>>(comments);
+        }
+
+        public async Task<PagedResult<CommentResponseDto>> GetCommentsByPostIdPagedAsync(Guid postId, int pageNumber, int pageSize)
+        {
+            // 1. هات الداتا
+            var comments = await _postCommentRepository.GetCommentsByPostIdPagedAsync(postId, pageNumber, pageSize);
+
+            // 2. هات العدد الكلي
+            var totalCount = await _postCommentRepository.GetTotalCommentsCountAsync(postId);
+
+            // 3. Map
+            var dtos = _mapper.Map<List<CommentResponseDto>>(comments);
+
+            // 4. Return Paged Result
+            return new PagedResult<CommentResponseDto>(dtos, totalCount, pageNumber, pageSize);
         }
     }
 }

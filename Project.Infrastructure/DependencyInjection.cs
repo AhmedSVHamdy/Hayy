@@ -12,6 +12,7 @@ using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.Domain.RopositoryContracts;
 using Project.Core.ServiceContracts; // عشان INotifier
+using Project.Core.Services;
 using Project.Infrastructure.ApplicationDbContext;
 using Project.Infrastructure.Repositories;
 using Project.Infrastructure.SignalR;
@@ -99,6 +100,8 @@ namespace Project.Infrastructure
             services.AddScoped<IBusinessPostRepository, BusinessPostRepository>();
             services.AddScoped<IPostCommentRepository, PostCommentRepository>();
             services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+            services.AddScoped<IReviewReplyRepository, ReviewReplyRepository>();
+            services.AddScoped<IPlaceFollowRepository, PlaceFollowRepository>();
 
             // ====================================================
             // 5. Infrastructure Services (الخدمات المرتبطة بالبنية التحتية فقط)

@@ -18,29 +18,29 @@ namespace Project.Core.Services
         private readonly IUserLogService _userLogService;     // مسؤول الـ MongoDB
         private readonly IMapper _mapper;                     // مسؤول التحويل
         private readonly INotifier _notifier; // SignalR
-        //private readonly IPlaceRepository _placeRepo;         // Place (عشان نحدث التقييم)
+        private readonly IPlaceRepository _placeRepo;         // Place (عشان نحدث التقييم)
         
 
 
-        public ReviewService(IReviewRepository reviewRepository, IUserLogService userLogService, IMapper mapper , INotifier notifier)//IPlaceRepository placeRepo
+        public ReviewService(IReviewRepository reviewRepository, IUserLogService userLogService, IMapper mapper , INotifier notifier, IPlaceRepository placeRepo)
         {
             _reviewRepository = reviewRepository;
             _userLogService = userLogService;
             _mapper = mapper;
             _notifier = notifier;
-            //_placeRepo = placeRepo;
+            _placeRepo = placeRepo;
 
         }
 
         public async Task<ReviewResponseDto> AddReviewAsync(CreateReviewDto createReviewDto)
         {
             // 🛑 Business Validation 1: هل المكان موجود؟
-            //var place = await _placeRepo.GetPlaceByIdAsync(createReviewDto.PlaceId);
-            //if (place == null)
-            //{
-            //    // بنرمي Exception والكنترولر هيصطاده ويرجع 404 أو 400
-            //    throw new KeyNotFoundException("عذراً، هذا المكان غير موجود في قاعدة البيانات.");
-            //}
+            var place = await _placeRepo.GetByIdWithDetailsAsync(createReviewDto.PlaceId);
+            if (place == null)
+            {
+                // بنرمي Exception والكنترولر هيصطاده ويرجع 404 أو 400
+                throw new KeyNotFoundException("عذراً، هذا المكان غير موجود في قاعدة البيانات.");
+            }
 
             // 🛑 Business Validation 2: هل المستخدم قيم المكان ده قبل كده؟
             var alreadyReviewed = await _reviewRepository.HasUserReviewedPlaceAsync(createReviewDto.UserId, createReviewDto.PlaceId);
@@ -58,10 +58,11 @@ namespace Project.Core.Services
 
             // 2️⃣ Update Place Rating (تحديث متوسط التقييم)
             // شيلنا الكومنت وكده الكود شغال لأن _placeRepo موجود
-            //await _placeRepo.UpdatePlaceRatingAsync(createReviewDto.PlaceId);
+            await _placeRepo.UpdatePlaceRatingAsync(createReviewDto.PlaceId);
 
             // 4️⃣ SignalR: تنبيه صاحب المطعم فوراً 🔔
             // بنفترض إن صاحب المطعم عامل Join لجروب بنفس الـ PlaceId
+            string groupName = $"Management_{createReviewDto.PlaceId}";
             await _notifier.SendNotificationToGroup(
                 createReviewDto.PlaceId.ToString(),
                 $"في ريفيو جديد {createReviewDto.Rating} نجوم! ⭐"
@@ -76,8 +77,8 @@ namespace Project.Core.Services
                 ActionType = ActionType.Review,   // نوع العملية: تقييم
                 TargetType = TargetType.Place,    // الهدف: مكان
                 TargetId = createReviewDto.PlaceId,
-                //CategoryId = place.CategoryId, // ✅ جبنا الـ CategoryId من المكان اللي بحثنا عنه فوق
-                SearchQuery = createReviewDto.Comment, // (اختياري) ممكن نخزن الكومنت هنا للتحليل
+                CategoryId = place.CategoryId, // ✅ جبنا الـ CategoryId من المكان اللي بحثنا عنه فوق
+                Details = createReviewDto.Comment, // (اختياري) ممكن نخزن الكومنت هنا للتحليل
                 Duration = 0,
             };
 

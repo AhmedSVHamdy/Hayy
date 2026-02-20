@@ -61,5 +61,12 @@ namespace Project.Infrastructure.Repositories
             return await _context.Reviews
                 .AnyAsync(r => r.UserId == userId && r.PlaceId == placeId);
         }
+        public async Task<Review?> GetReviewByIdAsync(Guid id)
+        {
+            return await _context.Reviews
+                .Include(r => r.User) // عشان تجيب بيانات صاحب الريفيو للإشعار
+                .Include(r => r.Place)
+                .FirstOrDefaultAsync(r => r.Id == id);
+        }
     }
 }

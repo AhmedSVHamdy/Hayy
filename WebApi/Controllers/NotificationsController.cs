@@ -34,12 +34,12 @@ namespace WebApi.Controllers
         /// <param name="request">The notification details to be created. Must not be null.</param>
         /// <returns>An IActionResult containing the result of the notification creation operation.</returns>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
         //[Authorize(Roles = "Admin")] يفضل تحط عليها قيد إن "الأدمن" بس هو اللي يقدر يندهها، عشان مش أي يوزر يبعت إشعارات ليوزر تاني بمزاجه.
         public async Task<IActionResult> Create([FromBody] NotificationAddRequest request)
         {
             var result = await _notificationService.CreateNotification(request);
-            return Ok(result);
+            return CreatedAtAction(nameof(GetMyNotifications), new { id = result.Id }, result);
+            //return Ok(result);
         }
 
         // 2. 📜 جلب كل إشعارات المستخدم الحالي

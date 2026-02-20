@@ -28,7 +28,9 @@ namespace Project.Core.Services
 
             // 3. الاتصال بالكونتينر اللي اسمه "images"
             var blobServiceClient = new BlobServiceClient(connectionString);
-            var containerClient = blobServiceClient.GetBlobContainerClient("images");
+            var containerClient = blobServiceClient.GetBlobContainerClient("osamaimages99");
+
+            // 3.1 إنشاء الكونتينر لو مش موجود
 
             // 4. تغيير اسم الملف عشان ميتكررش (UUID)
             // مثلاً: ahmed.jpg -> 550e8400-e29b-41d4-a716-446655440000.jpg

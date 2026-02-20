@@ -40,5 +40,21 @@ namespace Project.Infrastructure.Repositories
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<List<PostComment>> GetCommentsByPostIdPagedAsync(Guid postId, int pageNumber, int pageSize)
+        {
+            return await _context.PostComments
+                .Where(c => c.PostId == postId)
+                .Include(c => c.User) // ✅ مهم جداً: عشان نعرض اسم وصورة اللي كتب الكومنت
+                .OrderByDescending(c => c.CreatedAt) // الأحدث أولاً
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetTotalCommentsCountAsync(Guid postId)
+        {
+            return await _context.PostComments.CountAsync(c => c.PostId == postId);
+        }
     }
 }
