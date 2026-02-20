@@ -25,7 +25,8 @@ public partial class HayyContext : IdentityDbContext<User, ApplicationRole, Guid
         OnModelCreatingPartial(modelBuilder);
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        //modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(HayyContext).Assembly);
     }
 
 
@@ -45,6 +46,8 @@ public partial class HayyContext : IdentityDbContext<User, ApplicationRole, Guid
     public DbSet<Place> Places { get; set; } = null!;
     public DbSet<OpeningHour> OpeningHours { get; set; } = null!;
     public DbSet<BusinessPost> BusinessPosts { get; set; } = null!;
+    public DbSet<BusinessSubscription> BusinessSubscriptions { get; set; } = null!;
+
     public DbSet<Event> Events { get; set; } = null!;
     public DbSet<Offer> Offers { get; set; } = null!;
 
