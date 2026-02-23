@@ -15,6 +15,13 @@ namespace WebApi.Controllers
             _userLogService = userLogService;
         }
 
+        /// <summary>
+        /// Creates a new user activity log entry based on the provided data.
+        /// </summary>
+        /// <param name="dto">The data transfer object containing information about the user activity to log. Cannot be null and must
+        /// satisfy all validation requirements.</param>
+        /// <returns>An <see cref="OkObjectResult"/> containing a confirmation message if the log is created successfully;
+        /// otherwise, a <see cref="BadRequestObjectResult"/> containing validation errors.</returns>
         [HttpPost]
         public async Task<IActionResult> CreateLog([FromBody] CreateUserLogDto dto)
         {

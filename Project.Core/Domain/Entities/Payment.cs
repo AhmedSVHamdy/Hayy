@@ -22,7 +22,7 @@ namespace Project.Core.Domain.Entities
         public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
         public Guid BusinessId { get; set; } // مين
         public Guid PlanId { get; set; } // اشترى إيه
-
+        public Guid? EventBookingId { get; set; }
         // public Guid? SubscriptionId { get; set; } // المفتاح الأجنبي
         public BusinessSubscription? Subscription { get; set; }
     }

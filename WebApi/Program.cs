@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Project.Core; // 👈 1. ضيفنا دي عشان يشوف AddCoreServices
 using Project.Infrastructure; // ضروري عشان يشوف دالة AddInfrastructureServices
@@ -132,6 +133,8 @@ app.UseAuthorization();
 
 // نقاط النهاية (Endpoints)
 app.MapHub<NotificationHub>("/notificationHub");
+// 👇 السطر ده بس عشان يشغل لك لوحة التحكم على المتصفح
+app.UseHangfireDashboard("/hangfire");
 app.MapControllers();
 
 app.Run();

@@ -11,5 +11,6 @@ namespace Project.Core.ServiceContracts
         Task SendToUserAsync(Guid userId, NotificationResponse notification);
         Task SendNotificationToGroup(string groupName, string message);
         Task SendNotificationToUser(string groupName, string message);
+        Task SendNotificationToUserWaitlist(string userId, string message);
     }
 }

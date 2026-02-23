@@ -12,11 +12,13 @@ using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.Domain.RopositoryContracts;
 using Project.Core.ServiceContracts; // عشان INotifier
+using Project.Core.Services;
 using Project.Core.Settings;
 using Project.Infrastructure.ApplicationDbContext;
 using Project.Infrastructure.Repositories;
 using Project.Infrastructure.SignalR;
 using System;
+using Hangfire;
 
 namespace Project.Infrastructure
 {
@@ -38,6 +40,19 @@ namespace Project.Infrastructure
                         errorNumbersToAdd: null);
                 });
             });
+
+            // ====================================================
+            // 2. إعدادات Hangfire (العسكري اللي مش بينام)
+            // ====================================================
+            services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                // بيستخدم نفس الـ ConnectionString بتاع المشروع
+                .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection")));
+
+            // تشغيل السيرفر الداخلي لـ Hangfire عشان يبدأ ينفذ المهام
+            services.AddHangfireServer();
 
             // MongoDb Configuration
             try { BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String)); }
@@ -103,7 +118,10 @@ namespace Project.Infrastructure
             services.AddScoped<IPostLikeRepository, PostLikeRepository>();
             services.AddScoped<IReviewReplyRepository, ReviewReplyRepository>();
             services.AddScoped<IPlaceFollowRepository, PlaceFollowRepository>();
-
+            services.AddScoped<IEventRepository, EventRepository>();
+            services.AddScoped<IEventRepository, EventRepository>();
+            services.AddScoped<IEventBookingRepository, EventBookingRepository>();
+            services.AddHostedService<BookingExpirationWorker>();
 
             // ====================================================
             // 5. Infrastructure Services (الخدمات المرتبطة بالبنية التحتية فقط)

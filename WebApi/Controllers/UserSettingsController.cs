@@ -20,6 +20,11 @@ namespace WebApi.Controllers
         }
 
         // 1. جلب الإعدادات الحالية عشان تظهر على الـ UI
+        /// <summary>
+        /// Retrieves the current user's settings.
+        /// </summary>
+        /// <returns>An <see cref="IActionResult"/> containing the user's settings if found; otherwise, a NotFound result if the
+        /// settings do not exist.</returns>
         [HttpGet]
         public async Task<IActionResult> GetMySettings()
         {
@@ -35,6 +40,12 @@ namespace WebApi.Controllers
         }
 
         // 2. تحديث الإعدادات (لما يدوس Toggle)
+        /// <summary>
+        /// Updates the current user's notification settings based on the provided values.
+        /// </summary>
+        /// <param name="dto">An object containing the new notification settings to apply. Must not be null.</param>
+        /// <returns>An HTTP 200 response if the settings were updated successfully; otherwise, an HTTP 404 response if the
+        /// user's settings could not be found.</returns>
         [HttpPut]
         public async Task<IActionResult> UpdateSettings(UpdateUserSettingsDTO dto)
         {

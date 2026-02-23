@@ -9,5 +9,6 @@ namespace Project.Core.DTOs.Payments
         public Guid PlanId { get; set; } // الباقة اللي اختارها
         public Guid BusinessId { get; set; } // مين اللي بيدفع
         // ممكن تضيف PromoCode مستقبلاً هنا
+        public Guid? EventBookingId { get; set; }
     }
 }

@@ -15,6 +15,7 @@ namespace Project.Infrastructure.Repositories
         public IPaymentRepository Payments { get; private set; }
         public IBusinessSubscriptionRepository BusinessSubscriptions { get; private set; }
         public IGenericRepository<SubscriptionPlan> SubscriptionPlans { get; private set; }
+        public IEventBookingRepository EventBookings { get; private set; }
 
         public UnitOfWork(HayyContext context)
         {
@@ -23,6 +24,7 @@ namespace Project.Infrastructure.Repositories
             // تهيئة الـ Repositories المخصوصة
             Payments = new PaymentRepository(_context);
             BusinessSubscriptions = new BusinessSubscriptionRepository(_context);
+            EventBookings = new EventBookingRepository(_context);
 
             // تهيئة الـ Generic Repository للباقات
             SubscriptionPlans = new GenericRepository<SubscriptionPlan>(_context);
