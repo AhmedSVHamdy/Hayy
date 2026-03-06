@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Project.Core.Domain.Entities;
-
 namespace Project.Core.Domain.RepositoryContracts
 {
     public interface IPostCommentRepository
@@ -13,6 +11,9 @@ namespace Project.Core.Domain.RepositoryContracts
         Task<IEnumerable<PostComment>> GetCommentsByPostIdAsync(Guid postId);
 
         Task<PostComment?> GetCommentByIdAsync(Guid commentId);
-
+        Task<List<PostComment>> GetCommentsByPostIdPagedAsync(Guid postId, int pageNumber, int pageSize);
+        Task<int> GetTotalCommentsCountAsync(Guid postId); // عشان نعرف فيه كام صفحة
     }
+
 }
+

@@ -10,5 +10,8 @@ namespace Project.Core.Domain.RepositoryContracts
         Task<BusinessPost> AddPostAsync(BusinessPost post);
         Task<IEnumerable<BusinessPost>> GetPostsByPlaceIdAsync(Guid placeId);
         Task<BusinessPost?> GetPostByIdAsync(Guid postId);
+
+        Task<List<BusinessPost>> GetPostsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize);
+        Task<int> GetCountByPlaceIdAsync(Guid placeId);
     }
 }

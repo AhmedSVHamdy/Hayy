@@ -19,16 +19,16 @@ namespace Project.Core.Services
         private readonly IMapper _mapper;
         private readonly INotifier _notifier;
         private readonly IUserLogService _userLogService; // Mongo
-        //private readonly IPlaceRepository _placeRepository;
+        private readonly IPlaceRepository _placeRepository;
 
-        public PostLikeService(IPostLikeRepository postLikeRepository, IBusinessPostRepository businessPostRepository, IMapper mapper, INotifier notifier, IUserLogService userLogService)//IPlaceRepository placeRepository,
+        public PostLikeService(IPostLikeRepository postLikeRepository, IBusinessPostRepository businessPostRepository, IMapper mapper, INotifier notifier, IUserLogService userLogService, IPlaceRepository placeRepository)
         {
             _postLikeRepository = postLikeRepository;
             _businessPostRepository = businessPostRepository;
             _mapper = mapper;
             _notifier = notifier;
             _userLogService = userLogService;
-           // _placeRepository = placeRepository;
+            _placeRepository = placeRepository;
         }
         public async Task<LikeResponseDto> ToggleLikeAsync(ToggleLikeDto dto)
         {
@@ -56,19 +56,21 @@ namespace Project.Core.Services
 
                 // 🔔 SignalR: تنبيه لأصحاب المكان (الجروب)
                 // بنبعت للجروب اللي اسمه هو نفس الـ PlaceId بتاع البوست
-                await _notifier.SendNotificationToGroup(
+                await _notifier.SendNotificationToUser(
                     post.PlaceId.ToString(),
                     $"❤️ إعجاب جديد على البوست بتاعك!"
                 );
 
                 // 🧠 Mongo Log: تسجيل الحدث للذكاء الاصطناعي
+                // حماية: لو المكان مش جاي مع البوست، حط CategoryId بـ Empty عشان السيرفر ميقعش
+                Guid categoryId = post.Place?.CategoryId ?? Guid.Empty;
                 var logDto = new CreateUserLogDto
                 {
                     UserId = dto.UserId,
                     ActionType = ActionType.Like,
                     TargetType = TargetType.Post,
                     TargetId = dto.PostId,
-                   // CategoryId = place?.CategoryId, // ممكن تجيبه من الـ Place لو عايز دقة أكتر
+                    CategoryId = categoryId, // ممكن تجيبه من الـ Place لو عايز دقة أكتر
                     Duration = 0
                 };
                 await _userLogService.LogActivityAsync(logDto);

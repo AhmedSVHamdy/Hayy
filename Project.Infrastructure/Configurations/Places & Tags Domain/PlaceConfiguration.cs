@@ -23,6 +23,7 @@ namespace Project.Infrastructure.Configuration
             builder.Property(X => X.City).HasMaxLength(100);
             builder.Property(X => X.PhoneNumber).HasMaxLength(20);
 
+
             // الصور (غالباً روابط أو JSON)
             builder.Property(X => X.GalleryImages).IsRequired(false);
             builder.Property(X => X.CoverImage).IsRequired(false);

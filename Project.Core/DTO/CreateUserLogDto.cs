@@ -15,6 +15,6 @@ namespace Project.Core.DTO
         public Guid? CategoryId { get; set; }
         public Guid? TagId { get; set; }
         public int Duration { get; set; } // بالثواني
-        public string? SearchQuery { get; set; }
+        public string? Details { get; set; }
     }
 }

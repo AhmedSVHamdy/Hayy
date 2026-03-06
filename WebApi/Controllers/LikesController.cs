@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Project.Core.Helpers;
 using Project.Core.ServiceContracts;
 using System.Security.Claims;
 using static Project.Core.DTO.CeratePostLike;
@@ -18,37 +19,42 @@ namespace WebApi.Controllers
             _postLikeService = postLikeService;
         }
 
-        // POST: api/likes/toggle
-        [HttpPost("toggle")]
+       /// <summary>
+       /// Toggles the like status for a post on behalf of the authenticated user.
+       /// </summary>
+       /// <remarks>The user must be authenticated to toggle the like status. The method will like the post
+       /// if it is not already liked by the user, or unlike it if it is currently liked.</remarks>
+       /// <param name="dto">An object containing the post identifier and any additional data required to toggle the like status.</param>
+       /// <returns>An <see cref="IActionResult"/> indicating the result of the operation. Returns 200 OK with the updated like
+       /// status if successful; 401 Unauthorized if the user is not authenticated; 404 Not Found if the post does not
+       /// exist; or 400 Bad Request if an error occurs.</returns>
+        [HttpPost("toggle")] // POST api/likes/toggle
         public async Task<IActionResult> ToggleLike([FromBody] ToggleLikeDto dto)
         {
-            // 1️⃣ الأمان: هات الـ ID من التوكن
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userIdString))
+            // 1️⃣ استخراج الـ ID من التوكن
+            var userId = User.GetUserId();
+            if (userId == Guid.Empty)
             {
-                return Unauthorized("لازم تسجل دخول الأول! 🔒");
+                return Unauthorized("يرجى تسجيل الدخول 🔒");
             }
 
-            // 2️⃣ املأ الـ DTO بالـ ID الحقيقي
-            dto.UserId = Guid.Parse(userIdString);
-
-            // 3️⃣ التحقق (مش محتاج if (!ModelState) لأن [ApiController] بيعملها)
-            // بس الفاليديشن بتاع PostId لسه شغال أوتوماتيك
+            dto.UserId = userId;
 
             try
             {
+                // السيرفس هتقوم بالواجب (Like Or Unlike)
                 var result = await _postLikeService.ToggleLikeAsync(dto);
-                return Ok(result); // رجع الـ Response (عدد اللايكات الجديد وحالة اللايك)
+
+                // بنرجع 200 OK
+                return Ok(result);
             }
             catch (KeyNotFoundException ex)
             {
-                return NotFound(ex.Message); // لو البوست ممسوح
+                return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                // سجل الخطأ هنا لو عندك Logger
-                return StatusCode(500, "حدث خطأ غير متوقع.");
+                return BadRequest(new { message = "حدث خطأ أثناء تسجيل الإعجاب.", details = ex.Message });
             }
         }
     }

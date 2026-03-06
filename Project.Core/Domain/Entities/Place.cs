@@ -1,4 +1,6 @@
-﻿namespace Project.Core.Domain.Entities
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Project.Core.Domain.Entities
 {
     public class Place
     {
@@ -19,7 +21,6 @@
         public decimal AvgRating { get; set; }
         public int TotalReviews { get; set; }
         public bool IsActive { get; set; }
-
         public Business Business { get; set; } = null!;
         public Category Category { get; set; } = null!;
         public ICollection<OpeningHour> OpeningHours { get; set; } = new List<OpeningHour>();

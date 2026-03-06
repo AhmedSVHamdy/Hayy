@@ -10,5 +10,7 @@ namespace Project.Core.ServiceContracts
         // الدالة دي وظيفتها: "يا سيستم، وصل الرسالة دي لليوزر ده"
         Task SendToUserAsync(Guid userId, NotificationResponse notification);
         Task SendNotificationToGroup(string groupName, string message);
+        Task SendNotificationToUser(string groupName, string message);
+        Task SendNotificationToUserWaitlist(string userId, string message);
     }
 }

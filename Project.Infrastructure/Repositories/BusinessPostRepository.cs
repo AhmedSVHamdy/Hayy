@@ -24,6 +24,12 @@ namespace Project.Infrastructure.Repositories
             return post;
         }
 
+        public async Task<int> GetCountByPlaceIdAsync(Guid placeId)
+        {
+            return await _context.BusinessPosts
+                .CountAsync(p => p.PlaceId == placeId);
+        }
+
         public async Task<BusinessPost?> GetPostByIdAsync(Guid postId)
         {
             return await _context.BusinessPosts
@@ -39,6 +45,16 @@ namespace Project.Infrastructure.Repositories
                 .Include(p => p.PostLikes)   // عشان نعد اللايكات
                 .Include(p => p.PostComments)// عشان نعد الكومنتات
                 .OrderByDescending(p => p.CreatedAt) // الأحدث الأول
+                .ToListAsync();
+        }
+
+        public async Task<List<BusinessPost>> GetPostsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize)
+        {
+            return await _context.BusinessPosts
+                .Where(p => p.PlaceId == placeId)
+                .OrderByDescending(p => p.CreatedAt) // الأحدث يظهر الأول
+                .Skip((pageNumber - 1) * pageSize)   // تفويت الصفحات السابقة
+                .Take(pageSize)                      // جلب العدد المطلوب
                 .ToListAsync();
         }
     }

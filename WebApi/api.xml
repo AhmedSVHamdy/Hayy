@@ -266,16 +266,211 @@
             routing under the 'api/[controller]' route. All actions require valid input models and return appropriate HTTP
             status codes based on the operation outcome.</remarks>
         </member>
-        <member name="T:WebApi.Controllers.NotificationsController">
+        <member name="M:WebApi.Controllers.BusinessPostsController.CreatePost(Project.Core.DTO.CerateBusinessPostDto.CreatePostDto)">
             <summary>
-            Represents an API controller for managing user notifications, including creating new notifications, retrieving
-            notifications for the current user, and marking notifications as read.
+            Creates a new post for the specified place using the provided post data.
             </summary>
-            <remarks>All endpoints in this controller require the caller to be authenticated. The controller is
-            intended for use by authorized users only, and some actions (such as creating notifications) are typically
-            performed by administrators or system processes. The current user's identity is determined from the
-            authentication token rather than from request parameters, enhancing security by preventing spoofing of user
-            IDs.</remarks>
+            <remarks>The authenticated user's ID is automatically assigned to the post. The method
+            requires a valid authentication token. The response includes a link to retrieve posts for the place
+            associated with the created post.</remarks>
+            <param name="dto">The data transfer object containing the details of the post to create. Must include valid post information;
+            the user ID is assigned from the authenticated user's token.</param>
+            <returns>An IActionResult indicating the outcome of the operation. Returns 201 Created with the created post if
+            successful; 401 Unauthorized if the user token is invalid; 404 Not Found if the place does not exist; 403
+            Forbidden if the user does not own the place; or 400 Bad Request for other errors.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.BusinessPostsController.GetPlacePosts(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of posts associated with the specified place.
+            </summary>
+            <remarks>Supports pagination to efficiently retrieve large sets of posts. Use the <paramref
+            name="pageNumber"/> and <paramref name="pageSize"/> parameters to control paging.</remarks>
+            <param name="placeId">The unique identifier of the place for which to retrieve posts.</param>
+            <param name="pageNumber">The page number to retrieve. Must be greater than or equal to 1. Defaults to 1.</param>
+            <param name="pageSize">The number of posts to include in each page. Must be greater than 0. Defaults to 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a paged result of posts for the specified place.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.CommentsController.AddComment(Project.Core.DTO.CeratePostComment.CreateCommentDto)">
+            <summary>
+            Creates a new comment for a post using the specified comment data.
+            </summary>
+            <remarks>The user must be authenticated to add a comment. The user identifier is automatically
+            set based on the current user's authentication token.</remarks>
+            <param name="dto">The data transfer object containing the details of the comment to add. Must include the comment content and
+            the associated post identifier.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> that represents the result of the operation. Returns a 200 OK response with
+            the created comment data if successful, or a 401 Unauthorized response if the user is not authenticated.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.CommentsController.GetPostComments(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of comments for the specified post.
+            </summary>
+            <param name="postId">The unique identifier of the post for which to retrieve comments.</param>
+            <param name="pageNumber">The page number of results to retrieve. Must be greater than or equal to 1. The default is 1.</param>
+            <param name="pageSize">The number of comments to include on each page. Must be greater than 0. The default is 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a paged result of comments for the specified post.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.EventBookingsController.CreateBooking(Project.Core.DTO.CreateEventBooking.CreateBookingDto)">
+            <summary>
+            Creates a new booking for the authenticated user based on the provided booking details.
+            </summary>
+            <remarks>If the booking is waitlisted, the response includes the user's position in the
+            waitlist. Upon successful booking, the user has 15 minutes to complete payment before the booking is
+            cancelled. The user must be authenticated; otherwise, an unauthorized response is returned.</remarks>
+            <param name="dto">The booking information to be used for creating the reservation. Must contain valid booking details; cannot
+            be null.</param>
+            <returns>An IActionResult containing the result of the booking operation. Returns a success message and booking data
+            if the booking is created, a waitlist message if the booking is waitlisted, or a bad request message if the
+            input is invalid.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.EventBookingsController.GetMyBookings">
+            <summary>
+            Retrieves the list of bookings associated with the currently authenticated user.
+            </summary>
+            <remarks>This endpoint requires the user to be authenticated. The returned bookings are
+            specific to the user identified by the authentication token.</remarks>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the user's bookings if authentication is successful; otherwise, an
+            unauthorized response.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.EventBookingsController.GetMyBookingForEvent(System.Guid)">
+            <summary>
+            Retrieves the current user's booking for the specified event.
+            </summary>
+            <param name="eventId">The unique identifier of the event for which to retrieve the user's booking.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the booking details if found; <see cref="T:Microsoft.AspNetCore.Mvc.NotFoundResult"/> if the
+            user has not booked this event; or <see cref="T:Microsoft.AspNetCore.Mvc.UnauthorizedResult"/> if the user is not authenticated.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.EventsController.GetEvent(System.Guid)">
+            <summary>
+            Retrieves the event with the specified unique identifier.
+            </summary>
+            <param name="id">The unique identifier of the event to retrieve.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the event data if found; otherwise, a NotFound result.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.EventsController.GetActiveEvents">
+            <summary>
+            Handles HTTP GET requests to retrieve all currently active events. Allows anonymous access so that any user
+            can view available events without authentication.
+            </summary>
+            <remarks>This endpoint does not require authentication and can be accessed by any user. The
+            response format includes either the list of active events or a message if none are found.</remarks>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the list of active events. If no events are available, returns a
+            response with a message indicating that no events are currently available and an empty data set.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.LikesController.ToggleLike(Project.Core.DTO.CeratePostLike.ToggleLikeDto)">
+            <summary>
+            Toggles the like status for a post on behalf of the authenticated user.
+            </summary>
+            <remarks>The user must be authenticated to toggle the like status. The method will like the post
+            if it is not already liked by the user, or unlike it if it is currently liked.</remarks>
+            <param name="dto">An object containing the post identifier and any additional data required to toggle the like status.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> indicating the result of the operation. Returns 200 OK with the updated like
+            status if successful; 401 Unauthorized if the user is not authenticated; 404 Not Found if the post does not
+            exist; or 400 Bad Request if an error occurs.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.Create(Project.Core.DTO.NotificationAddRequest)">
+            <summary>
+            Creates a new notification based on the specified request data.
+            </summary>
+            <remarks>This action is restricted to users with the Admin role. Only administrators are
+            permitted to create notifications using this endpoint.</remarks>
+            <param name="request">The notification details to be created. Must not be null.</param>
+            <returns>An IActionResult containing the result of the notification creation operation.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.GetMyNotifications(System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of notifications for the currently authenticated user.
+            </summary>
+            <param name="pageNumber">The page number of the notifications to retrieve. Must be greater than or equal to 1. The default value is
+            1.</param>
+            <param name="pageSize">The number of notifications to include on each page. Must be greater than 0. The default value is 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the paginated notifications for the current user. Returns an
+            unauthorized result if the user is not authenticated.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.GetUnreadCount">
+            <summary>
+            Retrieves the number of unread notifications for the current user.
+            </summary>
+            <remarks>This endpoint is typically used to display the unread notification count in user
+            interface elements such as navigation bars. The count is specific to the authenticated user making the
+            request.</remarks>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a JSON object with a <c>count</c> property that represents the
+            number of unread notifications. The value is zero if there are no unread notifications.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.MarkAsRead(System.Guid)">
+            <summary>
+            Marks the specified notification as read for the current user.
+            </summary>
+            <param name="id">The unique identifier of the notification to mark as read.</param>
+            <returns>An HTTP 200 response if the notification was successfully marked as read.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.NotificationsController.MarkAllAsRead">
+            <summary>
+            Marks all notifications for the current user as read.
+            </summary>
+            <remarks>This action applies to all notifications associated with the authenticated user. The
+            response does not include the updated notification list.</remarks>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.OkObjectResult"/> containing a confirmation message if the operation succeeds.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.PlaceFollowsController.ToggleFollow(Project.Core.DTO.CeratePlaceFollow.TogglePlaceFollowDto)">
+            <summary>
+            Toggles the follow status of the specified place for the authenticated user.
+            </summary>
+            <remarks>This action requires the user to be authenticated. The follow status is toggled: if
+            the user is currently following the place, they will be unfollowed, and vice versa.</remarks>
+            <param name="dto">An object containing the details of the place to follow or unfollow.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> indicating the result of the operation. Returns a 200 OK response with a
+            message and the new follow status if successful; 401 Unauthorized if the user is not authenticated; 404 Not
+            Found if the specified place does not exist; or 400 Bad Request for other errors.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.PlaceFollowsController.GetFollowersByPlaceId(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of followers for the specified place.
+            </summary>
+            <param name="placeId">The unique identifier of the place whose followers are to be retrieved.</param>
+            <param name="pageNumber">The page number of the results to return. Must be greater than or equal to 1. The default is 1.</param>
+            <param name="pageSize">The maximum number of followers to include in a single page of results. Must be greater than 0. The default
+            is 10.</param>
+            <returns>An IActionResult containing a paginated list of followers for the specified place.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.PlaceFollowsController.GetFollowedPlacesByUser(System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of places followed by the currently authenticated user.
+            </summary>
+            <remarks>This endpoint requires the user to be authenticated. The results are specific to the
+            currently logged-in user and are returned in a paginated format based on the provided parameters.</remarks>
+            <param name="pageNumber">The page number of the results to retrieve. Must be greater than or equal to 1. The default value is 1.</param>
+            <param name="pageSize">The number of items to include on each page. Must be greater than 0. The default value is 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a paginated list of followed places for the authenticated user.
+            Returns an unauthorized response if the user is not authenticated.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewRepliesController.AddReply(Project.Core.DTO.CreateReviewReplyDTO.CreateReviewReplyDto)">
+            <summary>
+            Adds a reply to an existing review using the specified reply data.
+            </summary>
+            <remarks>The user must be authenticated to add a reply. The replier's user ID is automatically
+            set based on the authenticated user.</remarks>
+            <param name="dto">The data transfer object containing the details of the reply to add. Must include the review identifier and
+            reply content.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> that represents the result of the operation. Returns a 200 OK response with
+            the created reply data if successful.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewRepliesController.GetReplies(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of replies associated with the specified review.
+            </summary>
+            <param name="reviewId">The unique identifier of the review for which to retrieve replies.</param>
+            <param name="page">The page number of the results to retrieve. Must be greater than or equal to 1. The default value is 1.</param>
+            <param name="size">The number of replies to include per page. Must be greater than 0. The default value is 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the paginated list of replies for the specified review.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewRepliesController.DeleteReply(System.Guid)">
+            <summary>
+            Deletes the specified reply for the authenticated user.
+            </summary>
+            <param name="id">The unique identifier of the reply to delete.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> that represents the result of the delete operation. Returns a 204 No Content
+            response if the deletion is successful.</returns>
         </member>
         <member name="T:WebApi.Controllers.ReviewsController">
             <summary>
@@ -284,6 +479,54 @@
             <remarks>This controller provides endpoints for managing reviews in the application. It is configured
             as an API controller and uses dependency injection to access review-related services and object mapping
             functionality. All routes are prefixed with 'api/reviews'.</remarks>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewsController.AddReview(Project.Core.DTO.CreateReviewDto)">
+            <summary>
+            Creates a new review for a place using the provided review data.
+            </summary>
+            <remarks>Returns 400 Bad Request if the review cannot be added due to invalid operation, such
+            as duplicate reviews. Returns 404 Not Found if the specified place does not exist. Returns 500 Internal
+            Server Error for unexpected failures.</remarks>
+            <param name="dto">The review information to be added. Must include valid place and rating details. The user identifier is set
+            automatically based on the authenticated user.</param>
+            <returns>An HTTP 201 Created response containing the newly created review if successful; otherwise, an appropriate
+            error response such as 400 Bad Request or 404 Not Found.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.ReviewsController.GetReviewsByPlace(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Retrieves a paginated list of reviews for the specified place.
+            </summary>
+            <remarks>This endpoint returns reviews in a paginated format. If the specified place has no
+            reviews, the response will contain an empty list with status code 200 (OK).</remarks>
+            <param name="placeId">The unique identifier of the place for which to retrieve reviews.</param>
+            <param name="pageNumber">The page number of results to return. Must be greater than or equal to 1. Defaults to 1.</param>
+            <param name="pageSize">The number of reviews to include per page. Must be greater than 0. Defaults to 10.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing a list of reviews for the specified place. Returns an empty list
+            if no reviews are found.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.UserLogsController.CreateLog(Project.Core.DTO.CreateUserLogDto)">
+            <summary>
+            Creates a new user activity log entry based on the provided data.
+            </summary>
+            <param name="dto">The data transfer object containing information about the user activity to log. Cannot be null and must
+            satisfy all validation requirements.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.OkObjectResult"/> containing a confirmation message if the log is created successfully;
+            otherwise, a <see cref="T:Microsoft.AspNetCore.Mvc.BadRequestObjectResult"/> containing validation errors.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.UserSettingsController.GetMySettings">
+            <summary>
+            Retrieves the current user's settings.
+            </summary>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> containing the user's settings if found; otherwise, a NotFound result if the
+            settings do not exist.</returns>
+        </member>
+        <member name="M:WebApi.Controllers.UserSettingsController.UpdateSettings(Project.Core.DTO.UpdateUserSettingsDTO)">
+            <summary>
+            Updates the current user's notification settings based on the provided values.
+            </summary>
+            <param name="dto">An object containing the new notification settings to apply. Must not be null.</param>
+            <returns>An HTTP 200 response if the settings were updated successfully; otherwise, an HTTP 404 response if the
+            user's settings could not be found.</returns>
         </member>
         <member name="T:WebApi.Controllers.WebAuthController">
             <summary>

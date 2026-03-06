@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
  using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Project.Core.DTO.Places
 {
@@ -25,7 +26,6 @@ namespace Project.Core.DTO.Places
         public Guid CategoryId { get; set; }
         //البزنس مربوط مع المكان
         public Guid BusinessId { get; set; }
-
         // قائمة بمعرفات الوسوم (Tags)
         public List<Guid> TagIds { get; set; } = new List<Guid>();
 

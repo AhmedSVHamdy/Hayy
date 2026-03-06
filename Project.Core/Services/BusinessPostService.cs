@@ -18,42 +18,38 @@ namespace Project.Core.Services
         private readonly IUserLogService _userLogService; // Mongo
         private readonly IMapper _mapper;
         private readonly INotifier _notifier; // SignalR
-       // private readonly IPlaceRepository _placeRepository; // 1️⃣ ضفنا الريبو ده عشان نتأكد من المكان
-        public BusinessPostService(IBusinessPostRepository postRepository, IUserLogService userLogService, IMapper mapper, INotifier notifier)//IPlaceRepository placeRepository
+        private readonly IPlaceRepository _placeRepository; // 1️⃣ ضفنا الريبو ده عشان نتأكد من المكان
+        public BusinessPostService(IBusinessPostRepository postRepository, IUserLogService userLogService, IMapper mapper, INotifier notifier, IPlaceRepository placeRepository)
         {
             _postRepository = postRepository;
             _userLogService = userLogService;
             _mapper = mapper;
             _notifier = notifier;
-           // _placeRepository = placeRepository;
+            _placeRepository = placeRepository;
         }
 
         public async Task<PostResponseDto> CreatePostAsync(CreatePostDto dto)
         {
 
             // 🛑 Business Validation 1: هل المكان موجود؟
-            //var place = await _placeRepository.GetPlaceByIdAsync(dto.PlaceId);
+            var place = await _placeRepository.GetByIdWithDetailsAsync(dto.PlaceId);
 
-            //if (place == null)
-            //{
-            //    throw new KeyNotFoundException("عذراً، هذا المكان غير موجود 🚫");
-            //}
+            if (place == null)
+            {
+                throw new KeyNotFoundException("عذراً، هذا المكان غير موجود 🚫");
+            }
 
             // 🛑 Business Validation 2: (أخطر واحد) هل اليوزر هو صاحب المكان؟
             // لازم نتأكد إن الـ User اللي باعت الريكويست هو نفسه الـ OwnerId بتاع المكان
-            //if (place.OwnerId != dto.UserId)
-            //{
-            //    throw new UnauthorizedAccessException("غير مسموح لك بالنشر باسم هذا المكان! أنت لست المالك 👮‍♂️");
-            //}
+           
 
             // 🛑 Business Validation 3: (اختياري) هل المكان مفعل؟
             // لو المكان واخد بان أو لسه تحت المراجعة، مينفعش ينزل بوستات
-            /*
+            
             if (!place.IsActive)
             {
                 throw new InvalidOperationException("هذا المكان غير مفعل حالياً ولا يمكنه النشر.");
             }
-            */
 
 
 
@@ -65,6 +61,7 @@ namespace Project.Core.Services
 
             // 3. SignalR Notification 🔔
             // بنبعت تنبيه لكل الناس اللي عاملين Follow للمكان ده (Group = PlaceId)
+            string groupName = $"Followers_{dto.PlaceId}";
             await _notifier.SendNotificationToGroup(
                 dto.PlaceId.ToString(),
                 $"بوست جديد من مطعمك المفضل! 🍔: {dto.Content}"
@@ -80,8 +77,8 @@ namespace Project.Core.Services
                 ActionType = ActionType.Post, // ضيف Post في الـ Enum
                 TargetType = TargetType.Place,
                 TargetId = dto.PlaceId,
-                //CategoryId = place.CategoryId,
-                SearchQuery = dto.Content, // نخزن محتوى البوست للتحليل
+                CategoryId = place.CategoryId,
+                Details = dto.Content, // نخزن محتوى البوست للتحليل
                 Duration = 0
             };
             await _userLogService.LogActivityAsync(logDto);
@@ -94,6 +91,24 @@ namespace Project.Core.Services
         {
             var posts = await _postRepository.GetPostsByPlaceIdAsync(placeId);
             return _mapper.Map<IEnumerable<PostResponseDto>>(posts);
+        }
+
+        public async Task<PagedResult<PostResponseDto>> GetPostsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize)
+        {
+            if (pageNumber <= 0) pageNumber = 1;
+            if (pageSize <= 0) pageSize = 10;
+
+            // أ) هات الليستة من الريبو
+            var posts = await _postRepository.GetPostsByPlaceIdPagedAsync(placeId, pageNumber, pageSize);
+
+            // ب) هات العدد الكلي من الريبو
+            var totalCount = await _postRepository.GetCountByPlaceIdAsync(placeId);
+
+            // ج) حول لـ DTO
+            var dtos = _mapper.Map<List<PostResponseDto>>(posts);
+
+            // د) غلفهم في PagedResult ورجعهم
+            return new PagedResult<PostResponseDto>(dtos, totalCount, pageNumber, pageSize);
         }
     }
 }

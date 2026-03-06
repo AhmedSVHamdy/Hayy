@@ -8,6 +8,7 @@
         Post = 3,
         Business = 4,
         Category = 5,
-        Tag = 6
+        Tag = 6,
+        Review= 7,
     }
 }

@@ -2,13 +2,14 @@
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration; // 👈 مهم
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
+using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
 using Project.Core.Enums;
 using Project.Core.ServiceContracts;
 using System.Security.Claims;
-using Microsoft.Extensions.Configuration; // 👈 مهم
 
 namespace Project.Core.Services
 {
@@ -23,6 +24,7 @@ namespace Project.Core.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
+        private readonly IUnitOfWork _unitOfWork;
 
         public AuthApp(
             UserManager<User> userManager,
@@ -33,7 +35,8 @@ namespace Project.Core.Services
             IEmailService emailService,
             IHttpContextAccessor httpContextAccessor,
             IJwtService jwtService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IUnitOfWork unitOfWork)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -44,6 +47,7 @@ namespace Project.Core.Services
             _httpContextAccessor = httpContextAccessor;
             _jwtService = jwtService;
             _configuration = configuration;
+            _unitOfWork = unitOfWork;
         }
 
         // ==========================================================
@@ -80,12 +84,6 @@ namespace Project.Core.Services
                 EmailConfirmed = false
             };
 
-            UserSettings userSettings = new UserSettings() {
-            Id= new Guid(),
-            UserId = user.Id,
-
-            };
-
             // 4. Create User in DB
             IdentityResult result = await _userManager.CreateAsync(user, registerDTO.Password!);
             if (!result.Succeeded)
@@ -93,6 +91,27 @@ namespace Project.Core.Services
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 throw new ArgumentException($"Registration Failed: {errors}");
             }
+
+            var existingSettings = await _unitOfWork.GetRepository<UserSettings>()
+            .GetAsync(s => s.UserId == user.Id);
+
+            if (existingSettings == null)
+            {
+                UserSettings userSettings = new UserSettings()
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    EmailNotifications = true,
+                    NotificationsEnabled = true
+                };
+
+                await _unitOfWork.GetRepository<UserSettings>().AddAsync(userSettings);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+
+
+
 
             // 5. Assign Role
             string roleName = UserType.User.ToString();

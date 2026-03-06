@@ -35,5 +35,18 @@ namespace Project.Core.Services
 
             await client.SendMailAsync(mailMessage);
         }
+        public async Task SendEmailWaitList(string toEmail, string subject, string body)
+        {
+            // 💡 مستقبلاً: هنا هتحط كود الـ SMTP أو SendGrid أو Firebase Push Notifications
+
+            // مؤقتاً هنطبعها في الكونسول عشان نتأكد إنها شغالة
+            Console.WriteLine($"\n==========================================");
+            Console.WriteLine($"🔔 [إشعار جديد] إلى: {toEmail}");
+            Console.WriteLine($"موضوع: {subject}");
+            Console.WriteLine($"الرسالة: {body}");
+            Console.WriteLine($"==========================================\n");
+
+            await Task.CompletedTask;
+        }
     }
 }

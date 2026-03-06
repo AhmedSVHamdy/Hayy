@@ -3,6 +3,7 @@ using Project.Core.Domain.RepositoryContracts;
 using Project.Infrastructure.ApplicationDbContext;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Project.Infrastructure.Repositories
@@ -34,6 +35,11 @@ namespace Project.Infrastructure.Repositories
 
         public void Update(TEntity entity)=> 
                     _dbcontext.Set<TEntity>().Update(entity);
+
+        public async Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate)
+        {
+            return await _dbcontext.Set<TEntity>().FirstOrDefaultAsync(predicate);
+        }
 
     }
 }

@@ -48,12 +48,16 @@ namespace Project.Core
             services.AddScoped<IPostCommentService, PostCommentService>();
             services.AddScoped<IPostLikeService, PostLikeService>();
             services.AddScoped<IUserLogService, UserLogService>();
-
             services.AddScoped<IBusinessService, BusinessService>();
+            services.AddScoped<IReviewReplyService, ReviewReplyService>();
+            services.AddScoped<IPlaceFollowService, PlaceFollowService>();
+            services.AddScoped<IEventService, EventService>();
+            services.AddScoped<IEventBookingService, EventBookingService>();
 
             services.AddScoped<IAdminService, AdminService>();
             // تسجيل خدمة الدفع (PaymentService)
             services.AddHttpClient<IPaymentService, PaymentService>();
+
 
 
             // 2. تفعيل FluentValidation
@@ -68,6 +72,11 @@ namespace Project.Core
             services.AddAutoMapper(cfg => cfg.AddProfile<UserLogProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<CategoryProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<PlaceProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<ReviewReplyProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<BusinessMappingProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<PlaceFollowProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<EventProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<EventBookingProfile>());
 
 
             return services;

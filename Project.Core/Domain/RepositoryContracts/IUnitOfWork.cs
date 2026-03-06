@@ -13,6 +13,7 @@ namespace Project.Core.Domain.RepositoryContracts
         IPaymentRepository Payments { get; }
         IBusinessSubscriptionRepository BusinessSubscriptions { get; }
         IGenericRepository<SubscriptionPlan> SubscriptionPlans { get; } // ده Generic كافي لأنه بسيط
+        IEventBookingRepository EventBookings { get; }
 
         //Task<int> CompleteAsync();
         Task<int> SaveChangesAsync();

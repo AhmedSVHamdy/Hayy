@@ -12,5 +12,6 @@
 
         public User User { get; set; } = null!;
         public Place Place { get; set; } = null!;
+        public ICollection<ReviewReply> ReviewReplies { get; set; } = new List<ReviewReply>();
     }
 }

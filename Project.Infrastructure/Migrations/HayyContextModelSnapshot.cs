@@ -519,6 +519,9 @@ namespace Project.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsWaitlistEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<Guid>("PlaceId")
                         .HasColumnType("uniqueidentifier");
 
@@ -528,10 +531,22 @@ namespace Project.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("WaitlistLimit")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -547,6 +562,10 @@ namespace Project.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BookingCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("CheckedInCount")
                         .ValueGeneratedOnAdd()
@@ -565,10 +584,16 @@ namespace Project.Infrastructure.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("PaymentDeadline")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("QrCodeBase64")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -588,6 +613,9 @@ namespace Project.Infrastructure.Migrations
 
                     b.Property<Guid?>("UserId1")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("WaitlistPosition")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -755,6 +783,9 @@ namespace Project.Infrastructure.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)")
                         .HasDefaultValue("EGP");
+
+                    b.Property<Guid?>("EventBookingId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
@@ -1076,6 +1107,36 @@ namespace Project.Infrastructure.Migrations
                     b.HasIndex("UserId1");
 
                     b.ToTable("Reviews", (string)null);
+                });
+
+            modelBuilder.Entity("Project.Core.Domain.Entities.ReviewReply", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ReplierId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReplyText")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewId");
+
+                    b.ToTable("ReviewReplies", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.SubscriptionPlan", b =>
@@ -1776,6 +1837,17 @@ namespace Project.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Project.Core.Domain.Entities.ReviewReply", b =>
+                {
+                    b.HasOne("Project.Core.Domain.Entities.Review", "Review")
+                        .WithMany("ReviewReplies")
+                        .HasForeignKey("ReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Review");
+                });
+
             modelBuilder.Entity("Project.Core.Domain.Entities.UserInterestProfile", b =>
                 {
                     b.HasOne("Project.Core.Domain.Entities.User", "User")
@@ -1871,6 +1943,11 @@ namespace Project.Infrastructure.Migrations
             modelBuilder.Entity("Project.Core.Domain.Entities.PostComment", b =>
                 {
                     b.Navigation("Replies");
+                });
+
+            modelBuilder.Entity("Project.Core.Domain.Entities.Review", b =>
+                {
+                    b.Navigation("ReviewReplies");
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.SubscriptionPlan", b =>
