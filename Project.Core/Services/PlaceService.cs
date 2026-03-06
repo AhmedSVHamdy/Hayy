@@ -98,5 +98,15 @@ namespace Project.Core.Services
             var places = await _placeRepo.GetAllWithDetailsAsync();
             return _mapper.Map<IEnumerable<PlaceResponseDto>>(places);
         }
+        public async Task<List<PlaceResponseDto>> BasicSearchAsync(string searchTerm, Guid? categoryId)
+        {
+            // 1. بننادي على الـ Repo عشان يجيب الأماكن اللي بتطابق البحث
+            var places = await _placeRepo.SearchPlacesAsync(searchTerm, categoryId);
+
+            // 2. بنحول الـ List<Place> لـ List<PlaceResponseDto> باستخدام الـ Mapper 
+            var response = _mapper.Map<List<PlaceResponseDto>>(places);
+
+            return response;
+        }
     }
 }

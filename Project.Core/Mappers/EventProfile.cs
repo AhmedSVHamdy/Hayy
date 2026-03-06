@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Project.Core.Domain.Entities;
+using Project.Core.DTO;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -23,6 +24,7 @@ namespace Project.Core.Mappers
                 // 3. حساب حالة قائمة الانتظار (لو التذاكر خلصت ولسه في مكان في الويت ليست)
                 .ForMember(dest => dest.CanJoinWaitlist, opt => opt.MapFrom(src =>
                     src.IsWaitlistEnabled && (src.EventBookings.Count() - src.Capacity) < src.WaitlistLimit));
+            CreateMap<CreateEventDTO.UpdateEventDto, Event>().ReverseMap();
         }
     }
 }

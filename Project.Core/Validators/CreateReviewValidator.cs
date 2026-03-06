@@ -22,4 +22,15 @@ namespace Project.Core.Validators
                 .MaximumLength(500).WithMessage("Comment cannot exceed 500 characters.");
         }
     }
+    public class UpdateReviewValidator : AbstractValidator<UpdateReviewDto>
+    {
+        public UpdateReviewValidator()
+        {
+            RuleFor(x => x.Rating)
+                .InclusiveBetween(1, 5).WithMessage("التقييم يجب أن يكون من 1 إلى 5 نجوم.");
+
+            RuleFor(x => x.Comment)
+                .MaximumLength(1000).WithMessage("التعليق لا يمكن أن يتجاوز 1000 حرف.");
+        }
+    }
 }

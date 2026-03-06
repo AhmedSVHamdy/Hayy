@@ -54,7 +54,7 @@ namespace Project.Web.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> SubmitOnboarding([FromForm] BusinessOnboardingDTO model)
+        public async Task<IActionResult> SubmitOnboarding([FromBody] BusinessOnboardingDTO model)
         {
             ValidationResult validationResult = await _onboardingValidator.ValidateAsync(model);
 

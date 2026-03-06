@@ -121,7 +121,9 @@ namespace Project.Infrastructure
             services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IEventRepository, EventRepository>();
             services.AddScoped<IEventBookingRepository, EventBookingRepository>();
+            services.AddScoped<IOfferRepository, OfferRepository>();
             services.AddHostedService<BookingExpirationWorker>();
+
 
             // ====================================================
             // 5. Infrastructure Services (الخدمات المرتبطة بالبنية التحتية فقط)
@@ -131,12 +133,7 @@ namespace Project.Infrastructure
             // SignalRNotifier يعتمد على HubContext الموجود هنا، لذلك يبقى هنا
             services.AddScoped<INotifier, SignalRNotifier>();
 
-            // ❌ حذفنا باقي الـ Services (PlaceService, CategoryService, etc.)
-            // لأن مكانهم الطبيعي هو ملف Core.DependencyInjection
-
-            // ❌ حذفنا AutoMapper 
-            // لأنه مسجل بالفعل في Core.DependencyInjection
-
+            
             return services;
         }
     }

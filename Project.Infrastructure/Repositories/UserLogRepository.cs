@@ -66,12 +66,12 @@ namespace Project.Infrastructure.Repositories
         public async Task<IEnumerable<string>> GetTopSearchQueriesAsync(int topCount)
         {
             // 1. فلتر: هات اللي ليهم SearchQuery بس
-            var filter = Builders<UserLog>.Filter.Ne(x => x.SearchQuery, null);
+            var filter = Builders<UserLog>.Filter.Ne(x => x.Details, null);
 
             return await _userLogs.Aggregate()
                 .Match(filter)
                 // 2. جمعهم حسب نص البحث وعددهم
-                .Group(l => l.SearchQuery, g => new { Query = g.Key, Count = g.Count() })
+                .Group(l => l.Details, g => new { Query = g.Key, Count = g.Count() })
                 // 3. رتبهم بالتنازلي (الأكثر تكراراً)
                 .SortByDescending(x => x.Count)
                 // 4. خد العدد المطلوب
@@ -104,13 +104,10 @@ namespace Project.Infrastructure.Repositories
 
         public async Task<int> GetTotalDurationByUserIdAsync(Guid userId)
         {
-            var result = await _userLogs.Aggregate()
-                .Match(x => x.UserId == userId)
-                // اجمع عمود Duration
-                .Group(l => l.UserId, g => new { TotalDuration = g.Sum(x => x.Duration) })
-                .FirstOrDefaultAsync();
+            var count = await _userLogs.CountDocumentsAsync(x => x.UserId == userId);
 
-            return result?.TotalDuration ?? 0; // لو ملقاش داتا يرجع صفر
+            return (int)count;
+
         }
     }
 }

@@ -26,5 +26,15 @@ namespace Project.Core.Validators
 
             
         }
+
+    }
+    public class UpdateCommentValidator : AbstractValidator<UpdateCommentDto>
+    {
+        public UpdateCommentValidator()
+        {
+            RuleFor(x => x.Content)
+                .NotEmpty().WithMessage("محتوى التعليق لا يمكن أن يكون فارغاً.")
+                .MaximumLength(500).WithMessage("التعليق لا يمكن أن يتجاوز 500 حرف.");
+        }
     }
 }

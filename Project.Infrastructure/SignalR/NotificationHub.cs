@@ -15,7 +15,7 @@ namespace Project.Infrastructure.SignalR
         public override async Task OnConnectedAsync()
         {
             // ممكن هنا تسجل في الداتابيز إن اليوزر "Online"
-            // string userId = Context.UserIdentifier;
+             string userId = Context.UserIdentifier;
 
             await base.OnConnectedAsync();
         }

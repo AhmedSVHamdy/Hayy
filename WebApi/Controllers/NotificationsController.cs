@@ -14,8 +14,9 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-     
-    [Authorize] // 🔐 مهم جداً: محدش يستخدم الكنترولر ده غير لما يكون مسجل دخول
+
+    [Authorize(Roles = "User")]
+    // 🔐 مهم جداً: محدش يستخدم الكنترولر ده غير لما يكون مسجل دخول
     public partial class NotificationsController : ControllerBase
     {
         private readonly INotificationService _notificationService;
@@ -34,7 +35,7 @@ namespace WebApi.Controllers
         /// <param name="request">The notification details to be created. Must not be null.</param>
         /// <returns>An IActionResult containing the result of the notification creation operation.</returns>
         [HttpPost]
-        //[Authorize(Roles = "Admin")] يفضل تحط عليها قيد إن "الأدمن" بس هو اللي يقدر يندهها، عشان مش أي يوزر يبعت إشعارات ليوزر تاني بمزاجه.
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] NotificationAddRequest request)
         {
             var result = await _notificationService.CreateNotification(request);

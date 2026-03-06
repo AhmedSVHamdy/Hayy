@@ -31,14 +31,10 @@ namespace Project.Core.DTO
             public List<CommentResponseDto> Replies { get; set; } = new List<CommentResponseDto>(); // الردود على التعليق
         }
 
+        public class UpdateCommentDto
+        {
+            public string Content { get; set; } = string.Empty;
+        }
 
-
-
-
-    }
-        
-            
-    
-    
-    
+    }   
 }

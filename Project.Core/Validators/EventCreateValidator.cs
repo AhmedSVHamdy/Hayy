@@ -22,4 +22,25 @@ namespace Project.Core.Validators
                 .WithMessage("يجب تحديد الحد الأقصى لقائمة الانتظار");
         }
     }
+    public class UpdateEventValidator : AbstractValidator<UpdateEventDto>
+    {
+        public UpdateEventValidator()
+        {
+            RuleFor(x => x.Title).NotEmpty().WithMessage("عنوان الإيفنت مطلوب.");
+
+            RuleFor(x => x.Datetime)
+                .GreaterThan(DateTime.UtcNow).WithMessage("تاريخ الإيفنت يجب أن يكون في المستقبل.");
+
+            RuleFor(x => x.Capacity)
+                .GreaterThan(0).WithMessage("سعة الإيفنت يجب أن تكون أكبر من صفر.");
+
+            RuleFor(x => x.Price)
+                .GreaterThanOrEqualTo(0).WithMessage("السعر لا يمكن أن يكون بالسالب.");
+
+            RuleFor(x => x.WaitlistLimit)
+                .GreaterThanOrEqualTo(0).WithMessage("الحد الأقصى لقائمة الانتظار يجب أن يكون 0 أو أكثر.");
+
+            RuleFor(x => x.RowVersion).NotEmpty().WithMessage("نسخة البيانات (RowVersion) مطلوبة للحفظ.");
+        }
+    }
 }

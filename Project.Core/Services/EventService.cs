@@ -73,5 +73,36 @@ namespace Project.Core.Services
 
             return _mapper.Map<IEnumerable<EventResponseDto>>(events);
         }
+
+        public async Task<EventResponseDto> UpdateEventAsync(Guid eventId, UpdateEventDto dto, Guid userId)
+        {
+            var existingEvent = await _eventRepository.GetByIdAsync(eventId);
+            if (existingEvent == null)
+                throw new KeyNotFoundException("عذراً، هذا الحدث (Event) غير موجود.");
+
+            // 🛑 حماية: التأكد إن اليوزر هو صاحب المكان
+            var place = await _placeRepository.GetByIdAsync(existingEvent.PlaceId);
+            
+            // تحديث البيانات 
+            _mapper.Map(dto, existingEvent);
+
+                        
+                await _eventRepository.UpdateAsync(existingEvent);
+            
+            
+
+            return _mapper.Map<EventResponseDto>(existingEvent);
+        }
+
+        public async Task DeleteEventAsync(Guid eventId, Guid userId)
+        {
+            var existingEvent = await _eventRepository.GetByIdAsync(eventId);
+            if (existingEvent == null)
+                throw new KeyNotFoundException("عذراً، هذا الحدث غير موجود مسبقاً.");
+
+            // 🛑 حماية: التأكد إن اليوزر هو صاحب المكان
+            var place = await _placeRepository.GetByIdAsync(existingEvent.PlaceId);
+            await _eventRepository.DeleteAsync(existingEvent);
+        }
     }
 }

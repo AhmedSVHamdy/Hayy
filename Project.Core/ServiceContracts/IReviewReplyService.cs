@@ -11,5 +11,6 @@ namespace Project.Core.ServiceContracts
         Task<ReviewReplyResponseDto> AddReplyAsync(CreateReviewReplyDto dto);
         Task<PagedResult<ReviewReplyResponseDto>> GetRepliesByReviewIdAsync(Guid reviewId, int pageNumber, int pageSize);
         Task DeleteReplyAsync(Guid replyId, Guid userId); // userId عشان نتأكد إنه صاحب الرد
+        Task<ReviewReplyResponseDto> UpdateReplyAsync(Guid replyId, UpdateReviewReplyDto dto, Guid userId);
     }
 }

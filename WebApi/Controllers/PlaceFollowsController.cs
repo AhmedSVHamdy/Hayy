@@ -28,7 +28,7 @@ namespace WebApi.Controllers
         /// message and the new follow status if successful; 401 Unauthorized if the user is not authenticated; 404 Not
         /// Found if the specified place does not exist; or 400 Bad Request for other errors.</returns>
         [HttpPost("toggle")]
-        [Authorize] // لازم يكون مسجل دخول
+        [Authorize(Roles = "User")]
         public async Task<IActionResult> ToggleFollow([FromBody] TogglePlaceFollowDto dto)
         {
             // بنجيب الـ ID بتاع اليوزر من التوكن
@@ -71,7 +71,8 @@ namespace WebApi.Controllers
         /// <param name="pageSize">The maximum number of followers to include in a single page of results. Must be greater than 0. The default
         /// is 10.</param>
         /// <returns>An IActionResult containing a paginated list of followers for the specified place.</returns>
-        [HttpGet("place/{placeId}/followers")]
+        [HttpGet("place/followers/{placeId}")]
+        [Authorize]
         // مش محتاجة Authorize لو مسموح لأي حد يشوف المتابعين، لو عايزها برايفت ضيفها
         public async Task<IActionResult> GetFollowersByPlaceId(Guid placeId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -89,7 +90,7 @@ namespace WebApi.Controllers
         /// <returns>An <see cref="IActionResult"/> containing a paginated list of followed places for the authenticated user.
         /// Returns an unauthorized response if the user is not authenticated.</returns>
         [HttpGet("user/follows")]
-        [Authorize] // لازم يكون مسجل دخول عشان نعرف هو مين
+        [Authorize(Roles = "User")]
         public async Task<IActionResult> GetFollowedPlacesByUser([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);

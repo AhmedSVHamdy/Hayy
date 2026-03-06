@@ -17,6 +17,12 @@ namespace WebApi.Controllers
         }
 
         // 1. Endpoint لبدء الدفع (القديمة)
+        /// <summary>
+        /// Initiates a new payment process using the provided payment details.
+        /// </summary>
+        /// <param name="dto">An object containing the payment information required to start the payment process. Cannot be null.</param>
+        /// <returns>An HTTP 200 response containing the generated payment key if the operation succeeds; otherwise, an HTTP 400
+        /// response with an error message.</returns>
         [HttpPost("initiate")]
         public async Task<IActionResult> InitiatePayment([FromBody] InitiatePaymentDto dto)
         {
@@ -33,6 +39,16 @@ namespace WebApi.Controllers
 
         // 2. Endpoint لاستقبال الرد (الجديدة - Webhook) 🟢
         // Paymob بيبعت POST Request عليه بيانات العملية
+        /// <summary>
+        /// Handles incoming Paymob webhook notifications by processing the provided transaction data.
+        /// </summary>
+        /// <remarks>This endpoint always returns a 200 OK response, regardless of processing outcome, to
+        /// prevent Paymob from resending the webhook. The HMAC value is expected in the query string, not the request
+        /// body, as per Paymob's integration requirements.</remarks>
+        /// <param name="dto">The webhook payload containing transaction details sent by Paymob in the request body.</param>
+        /// <param name="hmac">The HMAC signature sent by Paymob in the query string, used to verify the authenticity of the webhook
+        /// request.</param>
+        /// <returns>An HTTP 200 OK response to acknowledge receipt of the webhook notification.</returns>
         [HttpPost("webhook")]
         public async Task<IActionResult> PaymobWebhook([FromBody] PaymobWebhookDto dto, [FromQuery] string hmac)
         {

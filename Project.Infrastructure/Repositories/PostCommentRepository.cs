@@ -56,5 +56,16 @@ namespace Project.Infrastructure.Repositories
         {
             return await _context.PostComments.CountAsync(c => c.PostId == postId);
         }
+        public async Task UpdateAsync(PostComment comment)
+        {
+            _context.PostComments.Update(comment);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(PostComment comment)
+        {
+            _context.PostComments.Remove(comment);
+            await _context.SaveChangesAsync();
+        }
     }
 }

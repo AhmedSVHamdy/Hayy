@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
@@ -68,10 +69,12 @@ namespace Project.Core.Services
             // محتاجين نعرف البوست ده تبع مطعم إيه عشان نبعت لصاحب المطعم
             // (ممكن تحتاج دالة في PostRepo تجيب البوست بالـ ID)
             // هنفترض إننا بنبعت للجروب بتاع البوست نفسه عشان لو فيه يوزرز متابعين البوست
-            await _notifier.SendNotificationToUser(
+            
+                await _notifier.SendNotificationToUser(
                 dto.PostId.ToString(),
                 $"💬 تعليق جديد: {dto.Content}"
             );
+           
 
             Guid categoryId = post.Place != null ? post.Place.CategoryId : Guid.Empty;
             // 4. Mongo Log (AI) 🧠
@@ -82,8 +85,8 @@ namespace Project.Core.Services
                 TargetType = TargetType.Post,    // ضيف Post في TargetType Enum
                 TargetId = dto.PostId,
                 Details = dto.Content,
-                Duration = 0,
                 CategoryId = categoryId,
+                TagId = post.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>()
             };
             await _userLogService.LogActivityAsync(logDto);
 
@@ -111,6 +114,39 @@ namespace Project.Core.Services
 
             // 4. Return Paged Result
             return new PagedResult<CommentResponseDto>(dtos, totalCount, pageNumber, pageSize);
+        }
+        public async Task<CommentResponseDto> UpdateCommentAsync(Guid commentId, UpdateCommentDto dto, Guid userId)
+        {
+            var comment = await _postCommentRepository.GetCommentByIdAsync(commentId);
+
+            if (comment == null)
+                throw new KeyNotFoundException("عذراً، هذا التعليق غير موجود.");
+
+            // 🛑 حماية: هل اليوزر ده هو صاحب التعليق؟
+            if (comment.UserId != userId)
+                throw new UnauthorizedAccessException("غير مصرح لك بتعديل تعليق لا يخصك.");
+
+            // تحديث البيانات
+            comment.Content = dto.Content;
+            // comment.UpdatedAt = DateTime.UtcNow; // لو عندك الخاصية دي ضيفها
+
+            await _postCommentRepository.UpdateAsync(comment);
+
+            return _mapper.Map<CommentResponseDto>(comment);
+        }
+
+        public async Task DeleteCommentAsync(Guid commentId, Guid userId)
+        {
+            var comment = await _postCommentRepository.GetCommentByIdAsync(commentId);
+
+            if (comment == null)
+                throw new KeyNotFoundException("عذراً، هذا التعليق غير موجود مسبقاً.");
+
+            // 🛑 حماية: هل اليوزر ده هو صاحب التعليق؟
+            if (comment.UserId != userId)
+                throw new UnauthorizedAccessException("غير مصرح لك بحذف تعليق لا يخصك.");
+
+            await _postCommentRepository.DeleteAsync(comment);
         }
     }
 }

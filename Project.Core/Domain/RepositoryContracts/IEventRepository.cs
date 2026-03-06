@@ -13,5 +13,7 @@ namespace Project.Core.Domain.RepositoryContracts
         Task AddAsync(Event @event);
         Task<IEnumerable<Event>> GetActiveEventsAsync();
         // بدل Event خليها ترجع الـ DTO
+        Task UpdateAsync(Event eventItem);
+        Task DeleteAsync(Event eventItem);
     }
 }

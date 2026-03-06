@@ -68,5 +68,10 @@ namespace Project.Infrastructure.Repositories
                 .Include(r => r.Place)
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
+        public async Task UpdateAsync(Review review)
+        {
+            _context.Reviews.Update(review);
+            await _context.SaveChangesAsync();
+        }
     }
 }

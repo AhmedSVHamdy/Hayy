@@ -15,8 +15,6 @@ namespace Project.Core.Services
         private readonly IMapper _mapper;
         private readonly INotifier _notifier; // SignalR
         private readonly IUnitOfWork _unitOfWork; 
-
-
         public NotificationService(
             INotificationRepository repo,
             IMapper mapper,

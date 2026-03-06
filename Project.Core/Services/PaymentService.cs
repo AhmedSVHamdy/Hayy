@@ -105,8 +105,8 @@ namespace Project.Core.Services
         public async Task ProcessWebhookAsync(PaymobWebhookDto dto)
         {
             // 1. التأمين: التحقق من HMAC Signature
-            //if (!ValidateHmac(dto))
-            //    throw new Exception("Invalid HMAC signature");
+            if (!ValidateHmac(dto))
+                throw new Exception("Invalid HMAC signature");
 
             var transaction = dto.Obj;
             long paymobOrderId = transaction.Order.Id;

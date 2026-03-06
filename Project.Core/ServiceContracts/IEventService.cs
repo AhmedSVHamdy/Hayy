@@ -10,5 +10,7 @@ namespace Project.Core.ServiceContracts
         Task<EventResponseDto> CreateEventAsync(EventCreateDto createDto);
         Task<EventResponseDto?> GetEventByIdAsync(Guid id);
         Task<IEnumerable<EventResponseDto>> GetActiveEventsAsync(); // أو اسم الـ DTO بتاعك
+        Task<EventResponseDto> UpdateEventAsync(Guid eventId, UpdateEventDto dto, Guid userId);
+        Task DeleteEventAsync(Guid eventId, Guid userId);
     }
 }

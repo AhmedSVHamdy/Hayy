@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Project.Core.Enums;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -33,6 +34,22 @@ namespace Project.Core.DTO
             public decimal Price { get; set; }
             public string Status { get; set; } = string.Empty;
             public bool IsWaitlistEnabled { get; set; }
+            public byte[] RowVersion { get; set; }
+        }
+        public class UpdateEventDto
+        {
+            public string Title { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public string GalleryImages { get; set; } = string.Empty;
+            public DateTime Datetime { get; set; }
+            public int Capacity { get; set; }
+            public decimal Price { get; set; }
+            public EventStatus Status { get; set; }
+            public bool IsWaitlistEnabled { get; set; }
+            public int WaitlistLimit { get; set; }
+
+            // 🛡️ مهم جداً يتبعت عشان الـ Concurrency
+            public byte[] RowVersion { get; set; } = null!;
         }
     }
 }

@@ -46,6 +46,17 @@ namespace Project.Infrastructure.Repositories
 
             return activeEvents;
         }
+        public async Task UpdateAsync(Event eventItem)
+        {
+            _context.Events.Update(eventItem);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(Event eventItem)
+        {
+            _context.Events.Remove(eventItem);
+            await _context.SaveChangesAsync();
+        }
     }
 
 }

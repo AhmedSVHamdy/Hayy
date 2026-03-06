@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Project.Core.Domain.Entities;
 using Project.Core.DTO;
@@ -36,7 +37,8 @@ namespace WebApi.Controllers
         /// automatically based on the authenticated user.</param>
         /// <returns>An HTTP 201 Created response containing the newly created review if successful; otherwise, an appropriate
         /// error response such as 400 Bad Request or 404 Not Found.</returns>
-        [HttpPost]        
+        [HttpPost]
+        [Authorize(Roles = "User")]
         public async Task<IActionResult> AddReview([FromBody] CreateReviewDto dto)
         {            
 
@@ -66,6 +68,7 @@ namespace WebApi.Controllers
         /// <returns>An <see cref="IActionResult"/> containing a list of reviews for the specified place. Returns an empty list
         /// if no reviews are found.</returns>
         [HttpGet("{placeId}")]
+        [Authorize]
         // /api/reviews/{placeId}? pageNumber = 1 & pageSize = 10
         public async Task<IActionResult> GetReviewsByPlace(Guid placeId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -73,6 +76,46 @@ namespace WebApi.Controllers
 
             // لو مفيش تقييمات ممكن ترجع ليستة فاضية عادي (Status 200)
             return Ok(reviews);
+        }
+        /// <summary>
+        /// Updates an existing review with the specified data for the authenticated user.
+        /// </summary>
+        /// <remarks>This method requires the caller to be authenticated as a user with the 'User' role.
+        /// The review can only be updated by its owner. The request must include a valid user token containing the User
+        /// ID claim.</remarks>
+        /// <param name="reviewId">The unique identifier of the review to update.</param>
+        /// <param name="dto">An object containing the updated review information.</param>
+        /// <returns>An IActionResult indicating the outcome of the update operation. Returns 200 (OK) with the updated review on
+        /// success, 404 (Not Found) if the review does not exist, 403 (Forbidden) if the user is not authorized to
+        /// update the review, or 400 (Bad Request) for other errors.</returns>
+        [HttpPut("{reviewId}")]
+        [Authorize(Roles = "User")] // مسموح لليوزر العادي بس
+        public async Task<IActionResult> UpdateReview(Guid reviewId, [FromBody] UpdateReviewDto dto)
+        {
+            var userId = User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Unauthorized("Token is invalid or missing User ID claim.");
+            }
+
+            try
+            {
+                // بنباصي الـ userId للسيرفس عشان نتأكد من الصلاحية
+                var result = await _reviewService.UpdateReviewAsync(reviewId, dto, userId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message }); // 404
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message }); // 403
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message }); // 400
+            }
         }
     }
 }

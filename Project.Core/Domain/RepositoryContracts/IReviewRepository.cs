@@ -25,5 +25,6 @@ namespace Project.Core.Domain.RepositoryContracts
         Task<bool> HasUserReviewedPlaceAsync(Guid userId, Guid placeId);
 
         Task<Review?> GetReviewByIdAsync(Guid id);
+        Task UpdateAsync(Review review);
     }
 }

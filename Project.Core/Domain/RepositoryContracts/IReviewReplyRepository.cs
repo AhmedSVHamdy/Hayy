@@ -14,6 +14,7 @@ namespace Project.Core.Domain.RepositoryContracts
         Task<List<ReviewReply>> GetRepliesByReviewIdPagedAsync(Guid reviewId, int pageNumber, int pageSize);
         Task<int> GetTotalCountByReviewIdAsync(Guid reviewId);
 
+        Task UpdateAsync(ReviewReply reply);
         Task DeleteAsync(ReviewReply reply);
     }
 }

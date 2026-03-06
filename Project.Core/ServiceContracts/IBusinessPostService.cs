@@ -12,5 +12,7 @@ namespace Project.Core.ServiceContracts
         Task<IEnumerable<PostResponseDto>> GetPostsByPlaceIdAsync(Guid placeId);
 
         Task<PagedResult<PostResponseDto>> GetPostsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize);
+        Task<PostResponseDto> UpdatePostAsync(Guid postId, UpdatePostDto dto, Guid userId);
+        Task DeletePostAsync(Guid postId, Guid userId);
     }
 }

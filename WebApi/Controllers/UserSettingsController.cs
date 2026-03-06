@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 namespace WebApi.Controllers
 {
-    [Authorize] // لازم يكون عامل Login
+    [Authorize(Roles = "User")]
     [ApiController]
     [Route("api/[controller]")]
     public class UserSettingsController : ControllerBase

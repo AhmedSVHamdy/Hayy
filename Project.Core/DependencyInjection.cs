@@ -53,6 +53,7 @@ namespace Project.Core
             services.AddScoped<IPlaceFollowService, PlaceFollowService>();
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IEventBookingService, EventBookingService>();
+            services.AddScoped<IOfferService, OfferService>();
 
             services.AddScoped<IAdminService, AdminService>();
             // تسجيل خدمة الدفع (PaymentService)
@@ -77,6 +78,7 @@ namespace Project.Core
             services.AddAutoMapper(cfg => cfg.AddProfile<PlaceFollowProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<EventProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<EventBookingProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<OfferProfile>());
 
 
             return services;

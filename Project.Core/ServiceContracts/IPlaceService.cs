@@ -10,5 +10,7 @@ namespace Project.Core.ServiceContracts
         Task<PlaceResponseDto> CreatePlaceAsync(CreatePlaceDto dto);
         Task<PlaceResponseDto?> GetPlaceByIdAsync(Guid id);
         Task<IEnumerable<PlaceResponseDto>> GetAllPlacesAsync();
+        Task<List<PlaceResponseDto>> BasicSearchAsync(string searchTerm, Guid? categoryId);
+
     }
 }

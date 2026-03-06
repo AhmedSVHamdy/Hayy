@@ -11,5 +11,6 @@ namespace Project.Core.ServiceContracts
         Task<ReviewResponseDto> AddReviewAsync(CreateReviewDto createReviewDto);
         // بنغير الـ Return Type لـ PagedResult وبناخد PageNumber, PageSize
         Task<PagedResult<ReviewResponseDto>> GetReviewsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize);
+        Task<ReviewResponseDto> UpdateReviewAsync(Guid reviewId, UpdateReviewDto dto, Guid userId);
     }
 }

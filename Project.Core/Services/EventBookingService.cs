@@ -48,7 +48,6 @@ namespace Project.Core.Services
                 throw new ArgumentException(validationResult.Errors.First().ErrorMessage);
 
             // 2. جلب الحدث (باستخدام UoW)
-            // لاحظ إننا بنستخدم الدالة الذكية بتاعتك GetRepository
             var @event = await _unitOfWork.GetRepository<Event>().GetByIdAsync(dto.EventId);
             if (@event == null || @event.Status != EventStatus.Active)
                 throw new ArgumentException("هذا الحدث غير متاح حالياً.");
@@ -71,11 +70,22 @@ namespace Project.Core.Services
             {
                 // فيه مكان!
                 booking.Status = BookingStatus.Pending;
-                booking.PaymentDeadline = DateTime.UtcNow.AddMinutes(15); // خليها 15 دقيقة وقت التست عشان تلحق تجرب
+                booking.PaymentDeadline = DateTime.UtcNow.AddMinutes(1);
             }
             else if (@event.IsWaitlistEnabled)
             {
-                // حساب الويت ليست (باستخدام UoW)
+                // ========================================================
+                // 🔥 الحماية الجديدة: هل الإيفنت اتباع بالكامل (Confirmed/Used/Completed)؟
+                // ========================================================
+                int guaranteedTickets = await _unitOfWork.EventBookings.GetGuaranteedTicketsCountAsync(dto.EventId);
+
+                // لو التذاكر اللي اتقفلت نهائياً جابت آخر الإيفنت، ارفض الحجز فوراً
+                if (guaranteedTickets >= @event.Capacity)
+                {
+                    throw new ArgumentException("عفواً، نفدت جميع التذاكر بالكامل ولا توجد أماكن شاغرة في قائمة الانتظار.");
+                }
+
+                // لو لسه فيه أمل (تذاكر Pending ممكن تتلغي)، كمل وحطه في الويت ليست
                 int currentWaitlistCount = await _unitOfWork.EventBookings.GetWaitlistTicketsCountAsync(dto.EventId);
 
                 if (currentWaitlistCount + dto.TicketQuantity <= @event.WaitlistLimit)
@@ -93,16 +103,16 @@ namespace Project.Core.Services
                 throw new ArgumentException("عفواً، نفدت جميع التذاكر.");
             }
 
-            // 6. حفظ في الداتابيز (باستخدام UoW لضمان إنهم نفس الـ Context)
+            // 6. حفظ في الداتابيز (باستخدام UoW)
             await _unitOfWork.EventBookings.AddAsync(booking);
-            await _unitOfWork.SaveChangesAsync(); // كده هيتحفظ بنسبة مليار في المية
+            await _unitOfWork.SaveChangesAsync();
 
             // 7. تشغيل العسكري
             if (booking.Status == BookingStatus.Pending)
             {
                 BackgroundJob.Schedule<IEventBookingService>(
                     service => service.CancelUnpaidBookingAsync(booking.Id),
-                    TimeSpan.FromMinutes(15) // غير دي كمان لـ 15 مؤقتاً
+                    TimeSpan.FromMinutes(15)
                 );
             }
 
@@ -267,12 +277,12 @@ namespace Project.Core.Services
                     // نرقيه ونخليه Pending ونديله 15 دقيقة للدفع
                     nextInWaitlist.Status = BookingStatus.Pending;
                     nextInWaitlist.WaitlistPosition = null;
-                    nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(2);
+                    nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(1);
 
                     // نقول لـ Hangfire يصحى لليوزر ده كمان 15 دقيقة
                     BackgroundJob.Schedule<IEventBookingService>(
                         service => service.CancelUnpaidBookingAsync(nextInWaitlist.Id),
-                        TimeSpan.FromMinutes(2)
+                        TimeSpan.FromMinutes(1)
                     );
 
                     // ==========================================

@@ -22,5 +22,9 @@ namespace Project.Core.DTO
             public Guid ReplierId { get; set; }
             public DateTime CreatedAt { get; set; }
         }
+        public class UpdateReviewReplyDto
+        {
+            public string ReplyText { get; set; } = string.Empty;
+        }
     }
 }

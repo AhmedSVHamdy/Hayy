@@ -13,6 +13,8 @@ namespace Project.Core.Domain.RepositoryContracts
         Task<PostComment?> GetCommentByIdAsync(Guid commentId);
         Task<List<PostComment>> GetCommentsByPostIdPagedAsync(Guid postId, int pageNumber, int pageSize);
         Task<int> GetTotalCommentsCountAsync(Guid postId); // عشان نعرف فيه كام صفحة
+        Task UpdateAsync(PostComment comment);
+        Task DeleteAsync(PostComment comment);
     }
 
 }

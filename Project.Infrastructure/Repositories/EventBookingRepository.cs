@@ -101,5 +101,14 @@ namespace Project.Infrastructure.Repositories
                 .Where(b => b.EventId == eventId && b.Status == BookingStatus.Waitlisted)
                 .SumAsync(b => b.TicketQuantity);
         }
+        public async Task<int> GetGuaranteedTicketsCountAsync(Guid eventId)
+        {
+            return await _context.EventBookings
+                .Where(b => b.EventId == eventId &&
+                           (b.Status == BookingStatus.Confirmed ||
+                            b.Status == BookingStatus.Used ||
+                            b.Status == BookingStatus.Completed))
+                .SumAsync(b => b.TicketQuantity);
+        }
     }
 }

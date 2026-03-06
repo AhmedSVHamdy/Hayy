@@ -13,8 +13,15 @@ namespace Project.Core.DTO
         public TargetType TargetType { get; set; }
         public Guid? TargetId { get; set; }
         public Guid? CategoryId { get; set; }
-        public Guid? TagId { get; set; }
-        public int Duration { get; set; } // بالثواني
+        public List<Guid> TagId { get; set; } = new List<Guid>();
         public string? Details { get; set; }
+        public string? SearchQuery { get; set; }
+    }
+    public class LogSearchRequestDto
+    {
+        public Guid? UserId { get; set; }
+        public string SearchTerm { get; set; } // الكلمة اللي كتبها (مثال: "كافيه")
+        public Guid? CategoryId { get; set; }  // لو كان مختار كاتيجيوري معينة وهو بيبحث
+        public List<Guid>? TagId { get; set; } // لو كان مختار Tags
     }
 }

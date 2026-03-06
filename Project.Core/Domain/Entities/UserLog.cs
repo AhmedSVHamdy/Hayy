@@ -16,10 +16,9 @@ namespace Project.Core.Domain.Entities
         public TargetType TargetType { get; set; }
         public Guid? TargetId { get; set; }
         public Guid? CategoryId { get; set; }
-        public Guid? TagId { get; set; }
-        public int Duration { get; set; }
+        public List<Guid> TagId { get; set; } = new List<Guid>();
+        public string? Details { get; set; }
         public string? SearchQuery { get; set; }
         public DateTime CreatedAt { get; set; }
-
     }
 }

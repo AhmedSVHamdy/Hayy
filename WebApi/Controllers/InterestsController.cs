@@ -24,6 +24,14 @@ namespace WebApi.Controllers
             _userManager = userManager;
         }
 
+        /// <summary>
+        /// Retrieves the list of all available interests.
+        /// </summary>
+        /// <remarks>Use this endpoint to obtain all interests currently stored in the system. The
+        /// response will be empty if no interests exist.</remarks>
+        /// <returns>An <see cref="IActionResult"/> containing the list of interests with status code 200 (OK) if interests are
+        /// found; status code 204 (No Content) if no interests are available; or status code 500 (Internal Server
+        /// Error) if an error occurs.</returns>
         [HttpGet]
         public async Task<IActionResult> GetInterestsList()
         {
@@ -44,6 +52,17 @@ namespace WebApi.Controllers
             }
         }
 
+        /// <summary>
+        /// Saves the user's interests based on the provided request data.
+        /// </summary>
+        /// <remarks>This action requires the user to be authenticated. The user's identity is determined
+        /// from the authentication token. The request model must pass validation; otherwise, a bad request response is
+        /// returned.</remarks>
+        /// <param name="request">The request object containing the user's selected interests. Cannot be null. The request body must conform
+        /// to the expected model schema.</param>
+        /// <returns>An IActionResult indicating the result of the operation. Returns 200 OK if the interests are saved
+        /// successfully, 400 Bad Request if the request data is invalid, 401 Unauthorized if the user is not
+        /// authenticated, or 500 Internal Server Error if an unexpected error occurs.</returns>
         [HttpPost]
         public async Task<IActionResult> SaveInterests([FromBody] UserInterestRequestDTO request)
         {

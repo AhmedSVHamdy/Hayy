@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Project.Core; // 👈 1. ضيفنا دي عشان يشوف AddCoreServices
+using Project.Core.ServiceContracts;
 using Project.Infrastructure; // ضروري عشان يشوف دالة AddInfrastructureServices
 using Project.Infrastructure.ApplicationDbContext; // عشان الـ Seeder
 using Project.Infrastructure.SignalR; // عشان NotificationHub
@@ -46,13 +47,12 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowClient", policyBuilder =>
     {
         policyBuilder
-            .WithOrigins(allowedOrigins ?? new[] { "http://localhost:4200" })
+            .WithOrigins(allowedOrigins ?? new[] { "http://localhost:8080" })
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
 });
-
 // ==========================================
 // 3. إعدادات التوثيق (JWT Authentication)
 // ==========================================
@@ -98,6 +98,21 @@ builder.Services.AddAuthentication(options =>
 // ==========================================
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+
+    recurringJobManager.AddOrUpdate<IOfferService>(
+        "expire-finished-offers-job",
+        service => service.ExpireFinishedOffersAsync(),
+        Cron.Daily(),
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")
+        }
+    );
+}
+
 // تهيئة البيانات (Seeding) - فعلناها عشان الاختبار
 using (var scope = app.Services.CreateScope())
 {
@@ -117,10 +132,10 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();   
 }
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

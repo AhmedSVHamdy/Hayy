@@ -44,6 +44,12 @@ namespace Project.Infrastructure.Repositories
             return await _context.ReviewReplies.CountAsync(r => r.ReviewId == reviewId);
         }
 
+        public async Task UpdateAsync(ReviewReply reply)
+        {
+            _context.ReviewReplies.Update(reply);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task DeleteAsync(ReviewReply reply)
         {
             _context.ReviewReplies.Remove(reply);

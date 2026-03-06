@@ -71,7 +71,7 @@ namespace Project.Core.Services
                     TargetType = TargetType.Post,
                     TargetId = dto.PostId,
                     CategoryId = categoryId, // ممكن تجيبه من الـ Place لو عايز دقة أكتر
-                    Duration = 0
+                    TagId = post.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>()
                 };
                 await _userLogService.LogActivityAsync(logDto);
             }

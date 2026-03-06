@@ -17,7 +17,9 @@ namespace Project.Core.Mappers
             // Input -> Entity
             CreateMap<CreateCommentDto, PostComment>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => Guid.NewGuid()))
-                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.ParentCommentId,
+               opt => opt.MapFrom(src => src.ParentCommentId));
 
             // Entity -> Output
             CreateMap<PostComment, CommentResponseDto>()

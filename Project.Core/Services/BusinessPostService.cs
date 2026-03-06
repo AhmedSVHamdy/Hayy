@@ -15,14 +15,13 @@ namespace Project.Core.Services
     public class BusinessPostService : IBusinessPostService
     {
         private readonly IBusinessPostRepository _postRepository;
-        private readonly IUserLogService _userLogService; // Mongo
         private readonly IMapper _mapper;
         private readonly INotifier _notifier; // SignalR
         private readonly IPlaceRepository _placeRepository; // 1️⃣ ضفنا الريبو ده عشان نتأكد من المكان
-        public BusinessPostService(IBusinessPostRepository postRepository, IUserLogService userLogService, IMapper mapper, INotifier notifier, IPlaceRepository placeRepository)
+
+        public BusinessPostService(IBusinessPostRepository postRepository, IMapper mapper, INotifier notifier, IPlaceRepository placeRepository)
         {
             _postRepository = postRepository;
-            _userLogService = userLogService;
             _mapper = mapper;
             _notifier = notifier;
             _placeRepository = placeRepository;
@@ -39,19 +38,10 @@ namespace Project.Core.Services
                 throw new KeyNotFoundException("عذراً، هذا المكان غير موجود 🚫");
             }
 
-            // 🛑 Business Validation 2: (أخطر واحد) هل اليوزر هو صاحب المكان؟
-            // لازم نتأكد إن الـ User اللي باعت الريكويست هو نفسه الـ OwnerId بتاع المكان
-           
-
-            // 🛑 Business Validation 3: (اختياري) هل المكان مفعل؟
-            // لو المكان واخد بان أو لسه تحت المراجعة، مينفعش ينزل بوستات
-            
             if (!place.IsActive)
             {
                 throw new InvalidOperationException("هذا المكان غير مفعل حالياً ولا يمكنه النشر.");
             }
-
-
 
             // 1. Mapping
             var postEntity = _mapper.Map<BusinessPost>(dto);
@@ -63,27 +53,11 @@ namespace Project.Core.Services
             // بنبعت تنبيه لكل الناس اللي عاملين Follow للمكان ده (Group = PlaceId)
             string groupName = $"Followers_{dto.PlaceId}";
             await _notifier.SendNotificationToGroup(
-                dto.PlaceId.ToString(),
+                groupName, // ✅ بصينا المتغير هنا
                 $"بوست جديد من مطعمك المفضل! 🍔: {dto.Content}"
             );
 
-            // 4. Mongo Log (AI) 🧠
-            // بنسجل إن المكان ده نزل بوست، عشان الـ AI يعرف إن المكان ده نشيط (Active)
-            var logDto = new CreateUserLogDto
-            {
-
-                // UserId هنا ممكن يكون الـ OwnerId لو معاك، أو نسيبه Null لو العملية باسم السيستم
-                UserId = dto.UserId,
-                ActionType = ActionType.Post, // ضيف Post في الـ Enum
-                TargetType = TargetType.Place,
-                TargetId = dto.PlaceId,
-                CategoryId = place.CategoryId,
-                Details = dto.Content, // نخزن محتوى البوست للتحليل
-                Duration = 0
-            };
-            await _userLogService.LogActivityAsync(logDto);
-
-            // 5. Return
+            // 4. Return
             return _mapper.Map<PostResponseDto>(addedPost);
         }
 
@@ -110,5 +84,55 @@ namespace Project.Core.Services
             // د) غلفهم في PagedResult ورجعهم
             return new PagedResult<PostResponseDto>(dtos, totalCount, pageNumber, pageSize);
         }
+
+        public async Task<PostResponseDto> UpdatePostAsync(Guid postId, UpdatePostDto dto, Guid userId)
+        {
+            // 1. هل البوست موجود أصلاً؟
+            var post = await _postRepository.GetPostByIdAsync(postId);
+            if (post == null)
+            {
+                throw new KeyNotFoundException("عذراً، هذا المنشور غير موجود.");
+            }
+
+            // 2. هل المكان موجود؟ وهل اليوزر ده هو صاحب المكان؟ (الأمان 🛡️)
+            var place = await _placeRepository.GetByIdAsync(post.PlaceId);
+            if (place == null)
+            {
+                throw new KeyNotFoundException("عذراً، المكان المرتبط بهذا المنشور غير موجود.");
+            }
+
+            // 3. التعديل
+            post.Content = dto.Content;
+            // لو عندك خاصية UpdatedAt في الكلاس ضيفها:
+            // post.UpdatedAt = DateTime.UtcNow;
+
+            // 4. الحفظ في الداتابيز
+            await _postRepository.UpdateAsync(post);
+            // تأكد إن عندك دالة UpdateAsync أو إنك بتنادي SaveChangesAsync() في الريبو
+
+            // 5. إرجاع النتيجة
+            return _mapper.Map<PostResponseDto>(post);
+        }
+
+        public async Task DeletePostAsync(Guid postId, Guid userId)
+        {
+            // 1. هل البوست موجود؟
+            var post = await _postRepository.GetPostByIdAsync(postId);
+            if (post == null)
+            {
+                throw new KeyNotFoundException("عذراً، هذا المنشور غير موجود مسبقاً.");
+            }
+
+            // 2. هل اليوزر ده هو صاحب المكان؟ (الأمان 🛡️)
+            var place = await _placeRepository.GetByIdAsync(post.PlaceId);
+            if (place == null)
+            {
+                throw new KeyNotFoundException("عذراً، المكان المرتبط بهذا المنشور غير موجود.");
+            }
+            // 3. الحذف من الداتابيز
+            await _postRepository.DeleteAsync(post);
+            // تأكد إنك بتعمل SaveChangesAsync جوه دالة الـ Delete في الريبو
+        }
+
     }
 }

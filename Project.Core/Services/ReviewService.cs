@@ -62,13 +62,17 @@ namespace Project.Core.Services
 
             // 4️⃣ SignalR: تنبيه صاحب المطعم فوراً 🔔
             // بنفترض إن صاحب المطعم عامل Join لجروب بنفس الـ PlaceId
-            string groupName = $"Management_{createReviewDto.PlaceId}";
-            await _notifier.SendNotificationToGroup(
-                createReviewDto.PlaceId.ToString(),
-                $"في ريفيو جديد {createReviewDto.Rating} نجوم! ⭐"
-            );
+            if (place != null)
+            {
+                // 2. نجهز اسم الجروب الخاص بإدارة المكان ده
+                string groupName = $"Management_{place.Id}";
 
-
+                // 3. نبعت الإشعار للجروب كله (لأن معندناش يوزر محدد)
+                await _notifier.SendNotificationToGroup(
+                    groupName,
+                    $"في ريفيو جديد {createReviewDto.Rating} نجوم لمكانك! ⭐: {createReviewDto.Comment}"
+                );
+            }
 
             // 3️⃣ MongoDB: تسجيل الحدث للـ AI والتحليلات 🧠
             var logDto = new CreateUserLogDto
@@ -78,8 +82,8 @@ namespace Project.Core.Services
                 TargetType = TargetType.Place,    // الهدف: مكان
                 TargetId = createReviewDto.PlaceId,
                 CategoryId = place.CategoryId, // ✅ جبنا الـ CategoryId من المكان اللي بحثنا عنه فوق
+                TagId = place.PlaceTags.Select(t => t.TagId).ToList(),
                 Details = createReviewDto.Comment, // (اختياري) ممكن نخزن الكومنت هنا للتحليل
-                Duration = 0,
             };
 
             // نبعت اللوج للمونجو
@@ -104,6 +108,32 @@ namespace Project.Core.Services
             // ج) التحويل والرد
             var dtos = _mapper.Map<List<ReviewResponseDto>>(reviews);
             return new PagedResult<ReviewResponseDto>(dtos, totalCount, pageNumber, pageSize);
+        }
+        public async Task<ReviewResponseDto> UpdateReviewAsync(Guid reviewId, UpdateReviewDto dto, Guid userId)
+        {
+            // 1. هل التقييم موجود؟
+            var review = await _reviewRepository.GetReviewByIdAsync(reviewId);
+            if (review == null)
+            {
+                throw new KeyNotFoundException("عذراً، هذا التقييم غير موجود.");
+            }
+
+            // 2. 🛡️ حماية: التأكد إن اليوزر اللي بيعدل هو صاحب التقييم
+            if (review.UserId != userId)
+            {
+                throw new UnauthorizedAccessException("غير مصرح لك بتعديل تقييم لا يخصك.");
+            }
+
+            // 3. تحديث البيانات
+            review.Rating = dto.Rating;
+            review.Comment = dto.Comment;
+            review.ReviewImages = dto.ReviewImages;
+
+            // 4. الحفظ في الداتابيز
+            await _reviewRepository.UpdateAsync(review);
+
+            // 5. إرجاع النتيجة
+            return _mapper.Map<ReviewResponseDto>(review);
         }
     }
 }

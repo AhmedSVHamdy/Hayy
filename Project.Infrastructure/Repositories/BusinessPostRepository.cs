@@ -34,6 +34,7 @@ namespace Project.Infrastructure.Repositories
         {
             return await _context.BusinessPosts
         .Include(p => p.Place)
+        .ThenInclude(p => p.PlaceTags) // 👈 وهات التاجز المربوطة بالمكان
         .FirstOrDefaultAsync(p => p.Id == postId);
         }
 
@@ -56,6 +57,18 @@ namespace Project.Infrastructure.Repositories
                 .Skip((pageNumber - 1) * pageSize)   // تفويت الصفحات السابقة
                 .Take(pageSize)                      // جلب العدد المطلوب
                 .ToListAsync();
+        }
+        public async Task UpdateAsync(BusinessPost post)
+        {
+            _context.BusinessPosts.Update(post);
+            await _context.SaveChangesAsync(); // بنحفظ التعديلات في الداتابيز
+        }
+
+        // 3. دالة الحذف
+        public async Task DeleteAsync(BusinessPost post)
+        {
+            _context.BusinessPosts.Remove(post);
+            await _context.SaveChangesAsync(); // بنحفظ الحذف في الداتابيز
         }
     }
 }

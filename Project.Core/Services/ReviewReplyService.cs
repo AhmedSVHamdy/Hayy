@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Hosting;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
@@ -65,8 +66,8 @@ namespace Project.Core.Services
                     TargetType = TargetType.Review,       // الرد كان على إيه؟
                     TargetId = dto.ReviewId,              // رقم الريفيو
                     CategoryId = categoryId,              // تصنيف المطعم (إيطالي، شامي...)
-                    Details = dto.ReplyText,          // ممكن نخزن نص الرد عشان تحليل المشاعر (Sentiment Analysis)
-                    Duration = 0
+                    Details = dto.ReplyText,          // ممكن نخزن نص الرد عشان تحليل المشاعر (Sentiment Analysis
+                    TagId = review.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>()
                 };
 
                 // بنستخدم Fire and Forget (مش بنستنى النتيجة عشان منأخرش الرد على اليوزر)
@@ -101,6 +102,31 @@ namespace Project.Core.Services
                 throw new UnauthorizedAccessException("غير مسموح لك بحذف هذا الرد.");
 
             await _replyRepo.DeleteAsync(reply);
+        }
+        public async Task<ReviewReplyResponseDto> UpdateReplyAsync(Guid replyId, UpdateReviewReplyDto dto, Guid userId)
+        {
+            // 1. التأكد إن الرد موجود
+            var reply = await _replyRepo.GetByIdAsync(replyId);
+            if (reply == null)
+            {
+                throw new KeyNotFoundException("عذراً، هذا الرد غير موجود.");
+            }
+
+            // 2. 🛡️ حماية: التأكد إن اليوزر اللي بيعدل هو صاحب الرد
+            if (reply.ReplierId != userId)
+            {
+                throw new UnauthorizedAccessException("غير مصرح لك بتعديل رد لا يخصك.");
+            }
+
+            // 3. تحديث البيانات
+            reply.ReplyText = dto.ReplyText;
+            reply.UpdatedAt = DateTime.UtcNow; // ⏰ تحديث وقت التعديل
+
+            // 4. الحفظ في قاعدة البيانات
+            await _replyRepo.UpdateAsync(reply);
+
+            // 5. إرجاع النتيجة
+            return _mapper.Map<ReviewReplyResponseDto>(reply);
         }
     }
 }

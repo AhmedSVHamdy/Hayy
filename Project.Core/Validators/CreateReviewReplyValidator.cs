@@ -18,4 +18,13 @@ namespace Project.Core.Validators
                 .MaximumLength(1000).WithMessage("الرد طويل جداً، أقصى حد 1000 حرف.");
         }
     }
+    public class UpdateReviewReplyValidator : AbstractValidator<UpdateReviewReplyDto>
+    {
+        public UpdateReviewReplyValidator()
+        {
+            RuleFor(x => x.ReplyText)
+                .NotEmpty().WithMessage("نص الرد لا يمكن أن يكون فارغاً.")
+                .MaximumLength(1000).WithMessage("نص الرد لا يمكن أن يتجاوز 1000 حرف.");
+        }
+    }
 }

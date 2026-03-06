@@ -72,5 +72,31 @@ namespace Project.Infrastructure.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+        public async Task<List<Place>> SearchPlacesAsync(string searchTerm, Guid? categoryId)
+        {
+            var query = _context.Places
+                .Include(p => p.Category)
+                .Include(p => p.PlaceTags).ThenInclude(pt => pt.Tag)
+                .AsQueryable();
+
+            // 1. فلترة بالـ Category لو موجود
+            if (categoryId.HasValue && categoryId.Value != Guid.Empty)
+            {
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            }
+
+            // 2. البحث النصي
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.Trim().ToLower();
+                query = query.Where(p =>
+                    p.Name.ToLower().Contains(term) ||
+                    (p.Description != null && p.Description.ToLower().Contains(term)) ||
+                    p.PlaceTags.Any(pt => pt.Tag.Name.ToLower().Contains(term))
+                );
+            }
+
+            return await query.ToListAsync();
+        }
     }
 }

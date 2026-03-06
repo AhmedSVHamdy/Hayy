@@ -9,7 +9,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "User")]
     public class LikesController : ControllerBase
     {
         private readonly IPostLikeService _postLikeService;

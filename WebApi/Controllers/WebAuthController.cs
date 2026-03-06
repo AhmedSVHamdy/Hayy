@@ -601,5 +601,25 @@ namespace WebApi.Controllers
                 return BadRequest(new { Error = ex.Message });
             }
         }
+        // =========================
+        // 16. GOOGLE LOGIN
+        // =========================
+        /// <summary>
+        /// Authenticates a business user using Google social login credentials.
+        /// </summary>
+        /// <remarks>This endpoint enforces the 'Business' role for users authenticated via Google. It is
+        /// accessible without authentication and is intended for business user sign-in scenarios.</remarks>
+        /// <param name="socialDto">The social login data received from the client, containing Google authentication information. Cannot be
+        /// null.</param>
+        /// <returns>An <see cref="IActionResult"/> containing the authentication result. Returns a success response with user
+        /// information if authentication is successful; otherwise, returns an error response.</returns>
+        [HttpPost("google-login-business")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GoogleLoginBusiness([FromBody] SocialLoginDTO socialDto)
+        {
+            // هنا بنجبره ياخد Role = "Business"
+            var response = await _authService.GoogleLoginAsync(socialDto, "Business");
+            return Ok(response);
+        }
     }
 }

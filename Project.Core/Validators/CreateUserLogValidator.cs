@@ -18,10 +18,7 @@ namespace Project.Core.Validators
             RuleFor(x => x.ActionType)
                 .IsInEnum().WithMessage("Invalid Action Type.");
 
-            RuleFor(x => x.Duration)
-                .GreaterThanOrEqualTo(0).WithMessage("Duration cannot be negative.");
-
-            
+           
         }
     }
 }

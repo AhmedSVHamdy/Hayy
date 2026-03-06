@@ -9,7 +9,7 @@ namespace WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // لازم اليوزر يكون عامل لوجين عشان يحجز
+    // لازم اليوزر يكون عامل لوجين عشان يحجز
     public class EventBookingsController : ControllerBase
     {
         private readonly IEventBookingService _bookingService;
@@ -30,6 +30,7 @@ namespace WebApi.Controllers
         /// if the booking is created, a waitlist message if the booking is waitlisted, or a bad request message if the
         /// input is invalid.</returns>
         [HttpPost]
+        [Authorize(Roles = "User")]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto dto)
         {
             // بنجيب الـ UserId من التوكن بتاع الموبايل
@@ -70,6 +71,7 @@ namespace WebApi.Controllers
         /// <returns>An <see cref="IActionResult"/> containing the user's bookings if authentication is successful; otherwise, an
         /// unauthorized response.</returns>
         [HttpGet("my-bookings")]
+        [Authorize(Roles = "User")]
         public async Task<IActionResult> GetMyBookings()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -86,6 +88,7 @@ namespace WebApi.Controllers
         /// <returns>An <see cref="IActionResult"/> containing the booking details if found; <see cref="NotFoundResult"/> if the
         /// user has not booked this event; or <see cref="UnauthorizedResult"/> if the user is not authenticated.</returns>
         [HttpGet("my-bookings/{eventId}")]
+        [Authorize(Roles = "User")]
         public async Task<IActionResult> GetMyBookingForEvent(Guid eventId)
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -100,8 +103,18 @@ namespace WebApi.Controllers
 
             return Ok(result);
         }
-
+        /// <summary>
+        /// Verifies the validity of a ticket for the specified booking on behalf of the authenticated business user.
+        /// </summary>
+        /// <remarks>This action requires the caller to be authenticated as a user in the "Business" role.
+        /// The verification result indicates whether the ticket is valid and may include additional information for the
+        /// organizer.</remarks>
+        /// <param name="bookingId">The unique identifier of the booking to verify.</param>
+        /// <returns>An <see cref="OkObjectResult"/> containing the verification result if the ticket is valid; otherwise, a <see
+        /// cref="BadRequestObjectResult"/> with details about the failure. Returns <see cref="UnauthorizedResult"/> if
+        /// the user is not authenticated as a business user.</returns>
         [HttpPost("verify-ticket/{bookingId}")]
+        [Authorize(Roles = "Business")]
         public async Task<IActionResult> VerifyTicket(Guid bookingId)
         {
             // نجيب الـ ID بتاع المنظم اللي فاتح الأبلكيشن وبيمسح الكود

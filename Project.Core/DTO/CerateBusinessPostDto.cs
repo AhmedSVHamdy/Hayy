@@ -32,5 +32,11 @@ namespace Project.Core.DTO
             public int CommentsCount { get; set; } // عدد الكومنتات
             public Guid PlaceId { get; set; }
         }
+        public class UpdatePostDto
+        {
+            // الحاجات اللي مسموح للبيزنس يعدلها بس
+            public string Content { get; set; } = string.Empty;
+            public string? PostAttachments { get; set; } // رابط الصورة أو الفيديو
+        }
     }
 }

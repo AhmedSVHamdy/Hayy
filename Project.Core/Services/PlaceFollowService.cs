@@ -70,7 +70,7 @@ namespace Project.Core.Services
                 // 2️⃣ SignalR: تنبيه صاحب المطعم فوراً 🔔
                 string groupName = $"Management_{dto.PlaceId}";
                 await _notifier.SendNotificationToGroup(
-                    dto.PlaceId.ToString(),
+                    groupName,
                     "يوجد مستخدم جديد قام بمتابعة مكانك! 👤"
                 );
 
@@ -83,7 +83,7 @@ namespace Project.Core.Services
                     TargetId = dto.PlaceId,
                     CategoryId = place.CategoryId,    // ✅ جبنا الـ CategoryId من المكان اللي بحثنا عنه فوق
                     Details = "قام بمتابعة المكان",   // نص يوضح الحدث
-                    Duration = 0
+                    TagId = place.PlaceTags.Select(t => t.TagId).ToList(),
                 };
 
                 // نبعت اللوج للمونجو

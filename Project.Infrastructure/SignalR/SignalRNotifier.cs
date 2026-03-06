@@ -36,6 +36,7 @@ namespace Project.Infrastructure.SignalR
             // SignalR ذكي، هيدور على اليوزر اللي الـ Claim ID بتاعه بيساوي userId
             await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", message);
         }
+
         public async Task SendNotificationToUserWaitlist(string userId, string message)
         {
             // SignalR هيدور على اليوزر اللي عامل Login والـ ID بتاعه بيطابق الـ userId

@@ -11,5 +11,7 @@ namespace Project.Core.ServiceContracts
         Task<CommentResponseDto> AddCommentAsync(CreateCommentDto createPostCommentDto);
         Task<IEnumerable<CommentResponseDto>> GetCommentsByPostIdAsync(Guid postId);
         Task<PagedResult<CommentResponseDto>> GetCommentsByPostIdPagedAsync(Guid postId, int pageNumber, int pageSize);
+        Task<CommentResponseDto> UpdateCommentAsync(Guid commentId, UpdateCommentDto dto, Guid userId);
+        Task DeleteCommentAsync(Guid commentId, Guid userId);
     }
 }
