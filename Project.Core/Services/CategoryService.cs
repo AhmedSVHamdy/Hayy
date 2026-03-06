@@ -16,20 +16,20 @@ namespace Project.Core.Services
         private readonly ICategoryRepository _categoryRepo;
         private readonly IGenericRepository<Tag> _tagRepo;
         private readonly IGenericRepository<CategoryTag> _categoryTagRepo;
-        private readonly IUnitOfWork _unitOfWork; // 👈 1. ضيفنا ده
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
         public CategoryService(
             ICategoryRepository categoryRepo,
             IGenericRepository<Tag> tagRepo,
             IGenericRepository<CategoryTag> categoryTagRepo,
-            IUnitOfWork unitOfWork, // 👈 2. حقناه هنا
+            IUnitOfWork unitOfWork, 
             IMapper mapper)
         {
             _categoryRepo = categoryRepo;
             _tagRepo = tagRepo;
             _categoryTagRepo = categoryTagRepo;
-            _unitOfWork = unitOfWork; // 👈 3. سجلناه
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
 
