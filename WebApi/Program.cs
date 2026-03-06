@@ -8,6 +8,7 @@ using Project.Infrastructure.ApplicationDbContext; // عشان الـ Seeder
 using Project.Infrastructure.SignalR; // عشان NotificationHub
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using WebApi.Middlewares; // لو عندك Middleware
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,6 +40,7 @@ builder.Services.AddSwaggerGen(options =>
         options.IncludeXmlComments(xmlPath);
     }
 });
+
 
 // إعدادات CORS
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
@@ -97,6 +99,7 @@ builder.Services.AddAuthentication(options =>
 // 4. بناء التطبيق والـ Middleware
 // ==========================================
 var app = builder.Build();
+app.UseExceptionHandlingMiddleware();
 
 using (var scope = app.Services.CreateScope())
 {

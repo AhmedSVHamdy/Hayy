@@ -43,6 +43,14 @@ namespace WebApi.Controllers
             if (result == null) return NotFound();
             return Ok(result);
         }
+        [HttpGet("Get All")]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _categoryService.GetAllCategoriesAsync();
+            if (result == null) return NotFound();
+            return Ok(result);
+        }
+
 
         // Endpoint لربط الوسوم بالتصنيف
         /// <summary>
