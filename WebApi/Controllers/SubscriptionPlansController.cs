@@ -63,7 +63,7 @@ namespace WebApi.Controllers
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdatePlan(Guid id, [FromBody] UpdateSubscriptionPlanRequestDto dto)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid)      
                 return BadRequest(ModelState);
 
             var updated = await _service.UpdatePlanAsync(id, dto);
