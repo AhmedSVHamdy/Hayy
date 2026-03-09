@@ -54,6 +54,7 @@ namespace Project.Core
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<IEventBookingService, EventBookingService>();
             services.AddScoped<IOfferService, OfferService>();
+            services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
 
             services.AddScoped<IAdminService, AdminService>();
             // تسجيل خدمة الدفع (PaymentService)
@@ -79,6 +80,7 @@ namespace Project.Core
             services.AddAutoMapper(cfg => cfg.AddProfile<EventProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<EventBookingProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<OfferProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<SubscriptionPlanProfile>());
 
 
             return services;
