@@ -19,14 +19,17 @@ namespace Project.Core.Services
         private readonly INotifier _notifier;
         private readonly IMapper _mapper;
         private readonly IUserLogService _userLogService;
+        private readonly IUserInterestRepository _interestRepository;
 
-        public ReviewReplyService(IReviewReplyRepository replyRepo, IMapper mapper, IReviewRepository reviewRepo, INotifier notifier, IUserLogService userLogService)
+
+        public ReviewReplyService(IReviewReplyRepository replyRepo, IMapper mapper, IReviewRepository reviewRepo, INotifier notifier, IUserLogService userLogService, IUserInterestRepository interestRepository)
         {
             _replyRepo = replyRepo;
             _mapper = mapper;
             _reviewRepo = reviewRepo;
             _notifier = notifier;
             _userLogService = userLogService;
+            _interestRepository = interestRepository;
         }
 
         public async Task<ReviewReplyResponseDto> AddReplyAsync(CreateReviewReplyDto dto)
@@ -58,6 +61,17 @@ namespace Project.Core.Services
             {
                 // حماية: نتأكد إن Place مش null
                 Guid categoryId = review.Place != null ? review.Place.CategoryId : Guid.Empty;
+                List<Guid> placeTagIds = review.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>();
+                Guid currentReplierId = dto.ReplierId ?? Guid.Empty;
+                var userInterests = await _interestRepository.GetUserInterestsByUserIdAsync(currentReplierId);
+                Guid? userTopCategoryId = userInterests
+                    .OrderByDescending(i => i.InterestScore)
+                    .FirstOrDefault(i => i.CategoryId.HasValue)?.CategoryId;
+
+                List<Guid> userTagIds = userInterests
+                    .Where(i => i.TagId.HasValue)
+                    .Select(i => i.TagId.Value)
+                    .ToList();
 
                 var logDto = new CreateUserLogDto
                 {
@@ -67,7 +81,9 @@ namespace Project.Core.Services
                     TargetId = dto.ReviewId,              // رقم الريفيو
                     CategoryId = categoryId,              // تصنيف المطعم (إيطالي، شامي...)
                     Details = dto.ReplyText,          // ممكن نخزن نص الرد عشان تحليل المشاعر (Sentiment Analysis
-                    TagId = review.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>()
+                    TagId = review.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>(),
+                    UserTopInterestCategoryId = userTopCategoryId,
+                    UserInterestTagIds = userTagIds
                 };
 
                 // بنستخدم Fire and Forget (مش بنستنى النتيجة عشان منأخرش الرد على اليوزر)

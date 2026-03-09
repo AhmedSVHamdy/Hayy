@@ -16,6 +16,9 @@ namespace Project.Core.DTO
         public List<Guid> TagId { get; set; } = new List<Guid>();
         public string? Details { get; set; }
         public string? SearchQuery { get; set; }
+        public Guid? UserTopInterestCategoryId { get; set; } // أعلى اهتمام لليوزر وقتها
+        public List<Guid> UserInterestTagIds { get; set; } = new List<Guid>(); // تاجز اهتماماته الحالية
+
     }
     public class LogSearchRequestDto
     {
@@ -23,5 +26,7 @@ namespace Project.Core.DTO
         public string SearchTerm { get; set; } // الكلمة اللي كتبها (مثال: "كافيه")
         public Guid? CategoryId { get; set; }  // لو كان مختار كاتيجيوري معينة وهو بيبحث
         public List<Guid>? TagId { get; set; } // لو كان مختار Tags
+        public Guid? UserTopInterestCategoryId { get; set; } // أعلى اهتمام لليوزر وقتها
+        public List<Guid> UserInterestTagIds { get; set; } = new List<Guid>();
     }
 }

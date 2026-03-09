@@ -18,19 +18,22 @@ namespace Project.Core.Services
         private readonly IMapper _mapper;                       // مسؤول التحويل
         private readonly INotifier _notifier;                   // SignalR
         private readonly IPlaceRepository _placeRepo;           // Place (عشان نتأكد من المكان ونجيب الكاتيجوري)
+        private readonly IUserInterestRepository _interestRepository;
 
         public PlaceFollowService(
             IPlaceFollowRepository placeFollowRepository,
             IUserLogService userLogService,
             IMapper mapper,
             INotifier notifier,
-            IPlaceRepository placeRepo)
+            IPlaceRepository placeRepo,
+            IUserInterestRepository interestRepository)
         {
             _placeFollowRepository = placeFollowRepository;
             _userLogService = userLogService;
             _mapper = mapper;
             _notifier = notifier;
             _placeRepo = placeRepo;
+            _interestRepository = interestRepository;
         }
 
         public async Task<bool> ToggleFollowAsync(Guid userId, TogglePlaceFollowDto dto)
@@ -74,6 +77,16 @@ namespace Project.Core.Services
                     "يوجد مستخدم جديد قام بمتابعة مكانك! 👤"
                 );
 
+               
+                var userInterests = await _interestRepository.GetUserInterestsByUserIdAsync(userId);
+                Guid? userTopCategoryId = userInterests
+                    .OrderByDescending(i => i.InterestScore)
+                    .FirstOrDefault(i => i.CategoryId.HasValue)?.CategoryId;
+
+                List<Guid> userTagIds = userInterests
+                    .Where(i => i.TagId.HasValue)
+                    .Select(i => i.TagId.Value)
+                    .ToList();
                 // 3️⃣ MongoDB: تسجيل الحدث للـ AI والتحليلات 🧠
                 var logDto = new CreateUserLogDto
                 {
@@ -83,7 +96,9 @@ namespace Project.Core.Services
                     TargetId = dto.PlaceId,
                     CategoryId = place.CategoryId,    // ✅ جبنا الـ CategoryId من المكان اللي بحثنا عنه فوق
                     Details = "قام بمتابعة المكان",   // نص يوضح الحدث
-                    TagId = place.PlaceTags.Select(t => t.TagId).ToList(),
+                    TagId = place.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>(),
+                    UserTopInterestCategoryId = userTopCategoryId,
+                    UserInterestTagIds = userTagIds
                 };
 
                 // نبعت اللوج للمونجو

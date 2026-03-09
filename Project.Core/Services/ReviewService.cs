@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Hosting;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
@@ -19,17 +20,19 @@ namespace Project.Core.Services
         private readonly IMapper _mapper;                     // مسؤول التحويل
         private readonly INotifier _notifier; // SignalR
         private readonly IPlaceRepository _placeRepo;         // Place (عشان نحدث التقييم)
-        
+        private readonly IUserInterestRepository _interestRepository;
 
 
-        public ReviewService(IReviewRepository reviewRepository, IUserLogService userLogService, IMapper mapper , INotifier notifier, IPlaceRepository placeRepo)
+
+
+        public ReviewService(IReviewRepository reviewRepository, IUserLogService userLogService, IMapper mapper , INotifier notifier, IPlaceRepository placeRepo, IUserInterestRepository interestRepository)
         {
             _reviewRepository = reviewRepository;
             _userLogService = userLogService;
             _mapper = mapper;
             _notifier = notifier;
             _placeRepo = placeRepo;
-
+            _interestRepository = interestRepository;
         }
 
         public async Task<ReviewResponseDto> AddReviewAsync(CreateReviewDto createReviewDto)
@@ -74,6 +77,16 @@ namespace Project.Core.Services
                 );
             }
 
+            var userInterests = await _interestRepository.GetUserInterestsByUserIdAsync(createReviewDto.UserId);
+
+            Guid? userTopCategoryId = userInterests
+                .OrderByDescending(i => i.InterestScore)
+                .FirstOrDefault(i => i.CategoryId.HasValue)?.CategoryId;
+
+            List<Guid> userTagIds = userInterests
+                .Where(i => i.TagId.HasValue)
+                .Select(i => i.TagId.Value)
+                .ToList();
             // 3️⃣ MongoDB: تسجيل الحدث للـ AI والتحليلات 🧠
             var logDto = new CreateUserLogDto
             {
@@ -82,8 +95,10 @@ namespace Project.Core.Services
                 TargetType = TargetType.Place,    // الهدف: مكان
                 TargetId = createReviewDto.PlaceId,
                 CategoryId = place.CategoryId, // ✅ جبنا الـ CategoryId من المكان اللي بحثنا عنه فوق
-                TagId = place.PlaceTags.Select(t => t.TagId).ToList(),
+                TagId = place.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>(),
                 Details = createReviewDto.Comment, // (اختياري) ممكن نخزن الكومنت هنا للتحليل
+                UserTopInterestCategoryId = userTopCategoryId,
+                UserInterestTagIds = userTagIds
             };
 
             // نبعت اللوج للمونجو

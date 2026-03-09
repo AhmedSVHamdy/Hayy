@@ -211,49 +211,7 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  5. إنشاء أدمن (Updated ✅)
-        // =========================================================
-        /// <summary>
-        /// Creates a new admin user account. Requires admin authorization.
-        /// </summary>
-        /// <param name="registerDTO">The registration data for the new admin.</param>
-        /// <param name="image">Optional profile image file for the admin.</param>
-        /// <returns>A <see cref="RegisterResponse"/> containing the new admin details.</returns>
-        /// <response code="200">Admin created successfully with registration details.</response>
-        /// <response code="400">If validation fails or registration data is invalid.</response>
-        /// <response code="401">If the user is not authenticated.</response>
-        /// <response code="403">If the user does not have admin role.</response>
-        [HttpPost("create-admin")]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> CreateAdmin([FromForm] RegisterDTO registerDTO, IFormFile? image)
-        {
-            ValidationResult validationResult = await _registerDtoValidator.ValidateAsync(registerDTO);
-
-            if (!validationResult.IsValid)
-            {
-                var errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage);
-                return BadRequest(new { Error = "Validation Failed", Details = errors });
-            }
-
-            try
-            {
-                // 👇 التغيير: استخدام Response الجديد
-                RegisterResponse response = await _authWeb.RegisterAdminAsync(registerDTO, image);
-                return Ok(response);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { Error = ex.Message });
-            }
-        }
-
-
-        // =========================================================
-        //  6. LOGOUT
+        //  5. LOGOUT
         // =========================================================
         /// <summary>
         /// Logs out the currently authenticated user.
@@ -279,7 +237,7 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  7. CHANGE PASSWORD
+        //  6. CHANGE PASSWORD
         // =========================================================
         /// <summary>
         /// Changes the password for the currently authenticated user.
@@ -314,7 +272,7 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  8. FORGOT PASSWORD
+        //  7. FORGOT PASSWORD
         // =========================================================
         /// <summary>
         /// Initiates the password reset process by generating a reset token and sending it via email.
@@ -382,63 +340,9 @@ namespace WebApi.Controllers
             return Ok(new { Message = "Password has been reset successfully. You can login now." });
         }
 
+       
         // =========================================================
-        //  10. MAKE ADMIN (Promote User to Admin)
-        // =========================================================
-        /// <summary>
-        /// Promotes an existing user to Admin role.
-        /// </summary>
-        /// <param name="email">The email of the user to be promoted to Admin.</param>
-        /// <returns>A success message if the user is promoted successfully.</returns>
-        /// <response code="200">User promoted to Admin successfully.</response>
-        /// <response code="400">If email is missing, user not found, or already an admin.</response>
-        /// <response code="401">If the user is not authenticated.</response>
-        /// <response code="403">If the user does not have admin role.</response>
-        /// <response code="500">If an internal server error occurs.</response>
-        /// <remarks>
-        /// This endpoint requires Admin role. Only super admins can promote users to admin status.
-        /// </remarks>
-        [HttpPost("make-admin")]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> MakeAdmin(string email)
-        {
-            if (string.IsNullOrEmpty(email))
-                return BadRequest("Email is required.");
-
-            try
-            {
-                var result = await _authWeb.MakeAdmin(email);
-
-                if (result)
-                {
-                    return Ok(new
-                    {
-                        Success = true,
-                        Message = $"User {email} has been successfully promoted to Admin."
-                    });
-                }
-
-                return BadRequest("Failed to promote user.");
-            }
-            catch (ArgumentException ex)
-            {
-                // لو المستخدم مش موجود أو هو أدمن أصلاً
-                return BadRequest(new { Success = false, Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
-            }
-        }
-
-
-        // =========================================================
-        //  11. REFRESH TOKEN (New ✅)
+        //  10. REFRESH TOKEN (New ✅)
         // =========================================================
         /// <summary>
         /// Refreshes the JWT token using an expired access token and a valid refresh token.
@@ -478,7 +382,7 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  12. GOOGLE LOGIN (WEB)
+        //  11. GOOGLE LOGIN (WEB)
         // =========================================================
         /// <summary>
         /// Authenticates a business user using Google OAuth credentials for web access.
@@ -503,7 +407,7 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  13. CHECK EMAIL EXISTS
+        //  12. CHECK EMAIL EXISTS
         // =========================================================
         /// <summary>
         /// Checks if an email is already registered in the system.
@@ -532,7 +436,7 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  14. REVOKE TOKEN (Logout from specific device)
+        //  13. REVOKE TOKEN (Logout from specific device)
         // =========================================================
         /// <summary>
         /// Revokes a specific refresh token, effectively logging out from a specific device.
@@ -567,7 +471,7 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  15. GET USER PROFILE
+        //  14. GET USER PROFILE
         // =========================================================
         /// <summary>
         /// Retrieves the profile details of the currently logged-in user.
@@ -601,25 +505,6 @@ namespace WebApi.Controllers
                 return BadRequest(new { Error = ex.Message });
             }
         }
-        // =========================
-        // 16. GOOGLE LOGIN
-        // =========================
-        /// <summary>
-        /// Authenticates a business user using Google social login credentials.
-        /// </summary>
-        /// <remarks>This endpoint enforces the 'Business' role for users authenticated via Google. It is
-        /// accessible without authentication and is intended for business user sign-in scenarios.</remarks>
-        /// <param name="socialDto">The social login data received from the client, containing Google authentication information. Cannot be
-        /// null.</param>
-        /// <returns>An <see cref="IActionResult"/> containing the authentication result. Returns a success response with user
-        /// information if authentication is successful; otherwise, returns an error response.</returns>
-        [HttpPost("google-login-business")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GoogleLoginBusiness([FromBody] SocialLoginDTO socialDto)
-        {
-            // هنا بنجبره ياخد Role = "Business"
-            var response = await _authService.GoogleLoginAsync(socialDto, "Business");
-            return Ok(response);
-        }
+        
     }
 }

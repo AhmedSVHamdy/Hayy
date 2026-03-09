@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Project.Core.DTO;
 using Project.Core.ServiceContracts;
+using Project.Core.Services;
 using System.Security.Claims;
 
 namespace Project.Web.Controllers
@@ -22,6 +23,9 @@ namespace Project.Web.Controllers
         private readonly IAdminService _adminService;
         private readonly IBusinessService _businessService;
         private readonly IValidator<ReviewBusinessDTO> _reviewValidator; // 👇 حقن الفاليديشن هنا
+        private readonly IValidator<RegisterDTO> _registerDtoValidator;
+        private readonly IAuthWeb _authWeb;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AdminController"/> class.
@@ -32,11 +36,15 @@ namespace Project.Web.Controllers
         public AdminController(
             IAdminService adminService,
             IBusinessService businessService,
-            IValidator<ReviewBusinessDTO> reviewValidator)
+            IValidator<ReviewBusinessDTO> reviewValidator,
+            IValidator<RegisterDTO> registerDtoValidator,
+            IAuthWeb authWeb)
         {
             _adminService = adminService;
             _businessService = businessService;
             _reviewValidator = reviewValidator;
+            _registerDtoValidator = registerDtoValidator;
+            _authWeb = authWeb;
         }
 
         // =========================================================
@@ -163,6 +171,100 @@ namespace Project.Web.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { Success = false, Message = ex.Message });
+            }
+        }
+        // =========================================================
+        //  5. إنشاء أدمن (Updated ✅)
+        // =========================================================
+        /// <summary>
+        /// Creates a new admin user account. Requires admin authorization.
+        /// </summary>
+        /// <param name="registerDTO">The registration data for the new admin.</param>
+        /// <param name="image">Optional profile image file for the admin.</param>
+        /// <returns>A <see cref="RegisterResponse"/> containing the new admin details.</returns>
+        /// <response code="200">Admin created successfully with registration details.</response>
+        /// <response code="400">If validation fails or registration data is invalid.</response>
+        /// <response code="401">If the user is not authenticated.</response>
+        /// <response code="403">If the user does not have admin role.</response>
+        [HttpPost("create-admin")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> CreateAdmin([FromForm] RegisterDTO registerDTO, IFormFile? image)
+        {
+            ValidationResult validationResult = await _registerDtoValidator.ValidateAsync(registerDTO);
+
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage);
+                return BadRequest(new { Error = "Validation Failed", Details = errors });
+            }
+
+            try
+            {
+                // 👇 التغيير: استخدام Response الجديد
+                RegisterResponse response = await _authWeb.RegisterAdminAsync(registerDTO, image);
+                return Ok(response);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
+        }
+
+        // =========================================================
+        //  6. MAKE ADMIN (Promote User to Admin)
+        // =========================================================
+        /// <summary>
+        /// Promotes an existing user to Admin role.
+        /// </summary>
+        /// <param name="email">The email of the user to be promoted to Admin.</param>
+        /// <returns>A success message if the user is promoted successfully.</returns>
+        /// <response code="200">User promoted to Admin successfully.</response>
+        /// <response code="400">If email is missing, user not found, or already an admin.</response>
+        /// <response code="401">If the user is not authenticated.</response>
+        /// <response code="403">If the user does not have admin role.</response>
+        /// <response code="500">If an internal server error occurs.</response>
+        /// <remarks>
+        /// This endpoint requires Admin role. Only super admins can promote users to admin status.
+        /// </remarks>
+        [HttpPost("make-admin")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> MakeAdmin(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+                return BadRequest("Email is required.");
+
+            try
+            {
+                var result = await _authWeb.MakeAdmin(email);
+
+                if (result)
+                {
+                    return Ok(new
+                    {
+                        Success = true,
+                        Message = $"User {email} has been successfully promoted to Admin."
+                    });
+                }
+
+                return BadRequest("Failed to promote user.");
+            }
+            catch (ArgumentException ex)
+            {
+                // لو المستخدم مش موجود أو هو أدمن أصلاً
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
             }
         }
     }

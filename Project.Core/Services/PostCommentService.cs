@@ -20,14 +20,17 @@ namespace Project.Core.Services
         private readonly INotifier _notifier;
         private readonly IUserLogService _userLogService;
         private readonly IPlaceRepository _placeRepository;
-        public PostCommentService(IPostCommentRepository postCommentRepository, IBusinessPostRepository businessPostRepository, IMapper mapper, INotifier notifier, IUserLogService userLogService, IPlaceRepository placeRepository)
+        private readonly IUserInterestRepository _interestRepository;
+
+        public PostCommentService(IPostCommentRepository postCommentRepository, IBusinessPostRepository businessPostRepository, IMapper mapper, INotifier notifier, IUserLogService userLogService, IPlaceRepository placeRepository, IUserInterestRepository interestRepository)
         {
             _postCommentRepository = postCommentRepository;
             _businessPostRepository = businessPostRepository;
-            _mapper= mapper;
+            _mapper = mapper;
             _notifier = notifier;
             _userLogService = userLogService;
             _placeRepository = placeRepository;
+            _interestRepository = interestRepository;
         }
         public async Task<CommentResponseDto> AddCommentAsync(CreateCommentDto dto)
         {
@@ -77,6 +80,17 @@ namespace Project.Core.Services
            
 
             Guid categoryId = post.Place != null ? post.Place.CategoryId : Guid.Empty;
+            List<Guid> placeTagIds = post.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>();
+            var userInterests = await _interestRepository.GetUserInterestsByUserIdAsync(dto.UserId);
+
+            Guid? userTopCategoryId = userInterests
+                .OrderByDescending(i => i.InterestScore)
+                .FirstOrDefault(i => i.CategoryId.HasValue)?.CategoryId;
+
+            List<Guid> userTagIds = userInterests
+                .Where(i => i.TagId.HasValue)
+                .Select(i => i.TagId.Value)
+                .ToList();
             // 4. Mongo Log (AI) 🧠
             var logDto = new CreateUserLogDto
             {
@@ -86,7 +100,9 @@ namespace Project.Core.Services
                 TargetId = dto.PostId,
                 Details = dto.Content,
                 CategoryId = categoryId,
-                TagId = post.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>()
+                TagId = placeTagIds,
+                UserTopInterestCategoryId = userTopCategoryId,
+                UserInterestTagIds = userTagIds
             };
             await _userLogService.LogActivityAsync(logDto);
 
