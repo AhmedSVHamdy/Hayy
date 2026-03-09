@@ -13,9 +13,14 @@ namespace Project.Infrastructure.Repositories
 
         // الخصائص الصريحة (Explicit Properties)
         public IPaymentRepository Payments { get; private set; }
+        public ISubscriptionPlanRepository SubscriptionPlans { get; }
         public IBusinessSubscriptionRepository BusinessSubscriptions { get; private set; }
-        public IGenericRepository<SubscriptionPlan> SubscriptionPlans { get; private set; }
+        public IGenericRepository<SubscriptionPlan> SubscriptionPlan { get; private set; }
         public IEventBookingRepository EventBookings { get; private set; }
+
+       // ISubscriptionPlanRepository IUnitOfWork.SubscriptionPlans => throw new NotImplementedException();
+
+       // public IGenericRepository<SubscriptionPlan> SubscriptionPlans { get; private set; }
 
         public UnitOfWork(HayyContext context)
         {
@@ -27,7 +32,8 @@ namespace Project.Infrastructure.Repositories
             EventBookings = new EventBookingRepository(_context);
 
             // تهيئة الـ Generic Repository للباقات
-            SubscriptionPlans = new GenericRepository<SubscriptionPlan>(_context);
+            SubscriptionPlan = new GenericRepository<SubscriptionPlan>(_context);
+            SubscriptionPlans = new SubscriptionPlanRepository(context);
         }
 
         // دالة الحفظ اللي أنت اخترتها
@@ -60,6 +66,7 @@ namespace Project.Infrastructure.Repositories
 
             return (IGenericRepository<TEntity>)_repositories[type];
         }
+      
 
         public void Dispose()
         {

@@ -16,7 +16,7 @@ namespace Project.Core.DTO.Places
         public string Description { get; set; } = string.Empty;
 
         [Required]
-        public string Address { get; set; } = string.Empty;
+       // public string Address { get; set; } = string.Empty;
 
         public double Latitude { get; set; }
         public double Longitude { get; set; }
