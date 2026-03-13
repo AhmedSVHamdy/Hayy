@@ -35,8 +35,9 @@ namespace Project.Infrastructure.Configuration
 
             // 3. علاقة خطط الأسعار (BusinessPlans)
             builder.HasMany(x => x.BusinessPlans)
-                   .WithOne()
-                   .HasForeignKey("BusinessId"); // تأكد أن BusinessPlan يحتوي على BusinessId
+        .WithOne(bp => bp.Business)        // ✅ Navigation Property صريح
+        .HasForeignKey(bp => bp.BusinessId) // ✅ Lambda بدل String
+        .OnDelete(DeleteBehavior.Cascade); // تأكد أن BusinessPlan يحتوي على BusinessId
 
             // 4. علاقة التحليلات (BusinessAnalytics)
             builder.HasOne(x => x.BusinessAnalytics)

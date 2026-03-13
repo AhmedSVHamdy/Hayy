@@ -50,11 +50,12 @@ namespace Project.Web.Controllers
         /// </remarks>
         [HttpPost("onboarding")]
         [Authorize(Roles = "Business")]
+        [Consumes("multipart/form-data")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> SubmitOnboarding([FromBody] BusinessOnboardingDTO model)
+        public async Task<IActionResult> SubmitOnboarding([FromForm] BusinessOnboardingDTO model)
         {
             ValidationResult validationResult = await _onboardingValidator.ValidateAsync(model);
 

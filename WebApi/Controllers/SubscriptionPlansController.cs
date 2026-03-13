@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Project.Core.DTO.Plans;
 using Project.Core.ServiceContracts;
@@ -44,6 +45,7 @@ namespace WebApi.Controllers
         // POST api/subscriptionplans
         // ===========================
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddPlan([FromBody] AddSubscriptionPlanRequestDto dto)
         {
             if (!ModelState.IsValid)
@@ -61,6 +63,7 @@ namespace WebApi.Controllers
         // PUT api/subscriptionplans/{id}
         // ===========================
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdatePlan(Guid id, [FromBody] UpdateSubscriptionPlanRequestDto dto)
         {
             if (!ModelState.IsValid)      
@@ -78,6 +81,7 @@ namespace WebApi.Controllers
         // DELETE api/subscriptionplans/{id}  → Soft Delete
         // ===========================
         [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePlan(Guid id)
         {
             var result = await _service.DeletePlanAsync(id);
