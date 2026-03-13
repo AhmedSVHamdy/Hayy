@@ -26,24 +26,7 @@ namespace WebApi.Controllers
             _notificationService = notificationService;
         }
 
-        // 1. 📤 إرسال إشعار جديد (للأدمن أو السيستم)
-        /// <summary>
-        /// Creates a new notification based on the specified request data.
-        /// </summary>
-        /// <remarks>This action is restricted to users with the Admin role. Only administrators are
-        /// permitted to create notifications using this endpoint.</remarks>
-        /// <param name="request">The notification details to be created. Must not be null.</param>
-        /// <returns>An IActionResult containing the result of the notification creation operation.</returns>
-        [HttpPost]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create([FromBody] NotificationAddRequest request)
-        {
-            var result = await _notificationService.CreateNotification(request);
-            return CreatedAtAction(nameof(GetMyNotifications), new { id = result.Id }, result);
-            //return Ok(result);
-        }
-
-        // 2. 📜 جلب كل إشعارات المستخدم الحالي
+        // 1. 📜 جلب كل إشعارات المستخدم الحالي
         /// <summary>
         /// Retrieves a paginated list of notifications for the currently authenticated user.
         /// </summary>
@@ -65,7 +48,7 @@ namespace WebApi.Controllers
             return Ok(result);
         }
 
-        // 3. 🔴 جلب عدد الإشعارات غير المقروءة (عشان العداد في الـ Navbar)
+        // 2. 🔴 جلب عدد الإشعارات غير المقروءة (عشان العداد في الـ Navbar)
         /// <summary>
         /// Retrieves the number of unread notifications for the current user.
         /// </summary>
@@ -84,7 +67,7 @@ namespace WebApi.Controllers
             return Ok(new { count });
         }
 
-        // 4. ✅ تعليم إشعار واحد كمقروء (لما يضغط عليه)
+        // 3. ✅ تعليم إشعار واحد كمقروء (لما يضغط عليه)
         /// <summary>
         /// Marks the specified notification as read for the current user.
         /// </summary>
@@ -101,7 +84,7 @@ namespace WebApi.Controllers
             return Ok(new { Message = "Notification marked as read" });
         }
 
-        // 5. ✅✅ تعليم الكل كمقروء (زرار Mark All as Read)
+        // 4. ✅✅ تعليم الكل كمقروء (زرار Mark All as Read)
         /// <summary>
         /// Marks all notifications for the current user as read.
         /// </summary>

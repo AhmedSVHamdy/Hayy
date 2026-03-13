@@ -25,6 +25,8 @@ namespace Project.Web.Controllers
         private readonly IValidator<ReviewBusinessDTO> _reviewValidator; // 👇 حقن الفاليديشن هنا
         private readonly IValidator<RegisterDTO> _registerDtoValidator;
         private readonly IAuthWeb _authWeb;
+        private readonly INotificationService _notificationService;
+
 
 
         /// <summary>
@@ -38,13 +40,15 @@ namespace Project.Web.Controllers
             IBusinessService businessService,
             IValidator<ReviewBusinessDTO> reviewValidator,
             IValidator<RegisterDTO> registerDtoValidator,
-            IAuthWeb authWeb)
+            IAuthWeb authWeb,
+            INotificationService notificationService)
         {
             _adminService = adminService;
             _businessService = businessService;
             _reviewValidator = reviewValidator;
             _registerDtoValidator = registerDtoValidator;
             _authWeb = authWeb;
+            _notificationService = notificationService;
         }
 
         // =========================================================
@@ -266,6 +270,26 @@ namespace Project.Web.Controllers
             {
                 return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
             }
+        }
+        // =========================================================
+        //  7. Notification Admin (Promote User to Admin)
+        // =========================================================
+        /// <summary>
+        /// Creates a new notification using the specified request data.
+        /// </summary>
+        /// <remarks>This method requires the caller to have Admin role permissions. If the request data
+        /// is invalid, a 400 Bad Request response will be returned.</remarks>
+        /// <param name="request">The notification details to be added. This object must contain valid data for the notification to be
+        /// created.</param>
+        /// <returns>A 201 Created response containing the newly created notification object, including its unique identifier.</returns>
+        [HttpPost("notifications")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(NotificationResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create([FromBody] NotificationAddRequest request)
+        {
+            var result = await _notificationService.CreateNotification(request);
+            return Created($"api/notifications/{result.Id}", result);
         }
     }
 }
