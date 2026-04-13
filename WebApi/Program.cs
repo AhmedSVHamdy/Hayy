@@ -1,6 +1,8 @@
 ﻿using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+//using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using Project.Core; // 👈 1. ضيفنا دي عشان يشوف AddCoreServices
 using Project.Core.ServiceContracts;
 using Project.Infrastructure; // ضروري عشان يشوف دالة AddInfrastructureServices
@@ -39,7 +41,35 @@ builder.Services.AddSwaggerGen(options =>
     {
         options.IncludeXmlComments(xmlPath);
     }
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT token in the text box below.\r\n\r\nExample: '12345abcdef'"
+    });
+
+    // 2. تفعيل القفل على الـ Endpoints
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
 });
+
+
+ 
 
 
 // إعدادات CORS
@@ -114,6 +144,20 @@ using (var scope = app.Services.CreateScope())
             TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time")
         }
     );
+}
+
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+    app.UseSwagger(); // دي كفاية مرة واحدة هنا
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "HAYY API V1");
+        options.EnableDeepLinking();
+        options.DisplayRequestDuration();
+        options.EnableFilter();
+    });
 }
 
 // تهيئة البيانات (Seeding) - فعلناها عشان الاختبار
