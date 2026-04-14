@@ -91,7 +91,8 @@ namespace Project.Infrastructure
             .AddEntityFrameworkStores<HayyContext>()
             .AddDefaultTokenProviders()
             .AddUserStore<UserStore<User, ApplicationRole, HayyContext, Guid>>()
-            .AddRoleStore<RoleStore<ApplicationRole, HayyContext, Guid>>();
+            .AddRoleStore<RoleStore<ApplicationRole, HayyContext, Guid>>()
+            .AddDefaultTokenProviders();
 
             // ====================================================
             // 3. SignalR Configuration

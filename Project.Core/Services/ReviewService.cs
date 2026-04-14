@@ -96,7 +96,7 @@ namespace Project.Core.Services
                 TargetId = createReviewDto.PlaceId,
                 CategoryId = place.CategoryId, // ✅ جبنا الـ CategoryId من المكان اللي بحثنا عنه فوق
                 TagId = place.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>(),
-                Details = createReviewDto.Comment, // (اختياري) ممكن نخزن الكومنت هنا للتحليل
+                Details = createReviewDto.Rating.ToString(), // (اختياري) ممكن نخزن الكومنت هنا للتحليل
                 UserTopInterestCategoryId = userTopCategoryId,
                 UserInterestTagIds = userTagIds
             };

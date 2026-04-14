@@ -134,75 +134,37 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  3. تفعيل الإيميل
+        //  3. Legacy confirm-email endpoint (kept for backward compatibility)
+        // =========================================================
+        //[HttpGet("confirm-email")]
+        //[AllowAnonymous]
+        //[ApiExplorerSettings(IgnoreApi = true)]
+        //public IActionResult ConfirmEmail()
+        //{
+        //    return BadRequest(new
+        //    {
+        //        Error = "This endpoint is deprecated. Use POST /api/web/auth/verify-email-otp with { email, otp }."
+        //    });
+        //}
+
+        // =========================================================
+        //  4. إعادة إرسال كود التفعيل OTP
         // =========================================================
         /// <summary>
-        /// Confirms a user's email address using the provided token.
+        /// Resends the email verification OTP to the specified email address.
         /// </summary>
-        /// <param name="userId">The unique identifier of the user.</param>
-        /// <param name="token">The email confirmation token sent to the user's email.</param>
-        /// <returns>A success message if email is confirmed, otherwise an error response.</returns>
-        /// <response code="200">Email confirmed successfully.</response>
-        /// <response code="302">Redirects to frontend with error if userId or token is invalid.</response>
-        /// <response code="400">If email confirmation fails.</response>
-        /// <response code="500">If an internal server error occurs.</response>
-        [HttpGet("confirm-email")]
-        [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status302Found)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> ConfirmEmail(string userId, string token)
-        {
-            // 1. حدد رابط الفرونت إند بتاعك (سواء لوكال أو برودكشن)
-            // لو أنت شغال React محلياً غالباً بيكون البورت 3000
-            var frontendUrl = _configuration["AppSettings:FrontendUrl"] ?? "http://localhost:3000";
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
-            {
-                // لو البيانات ناقصة، رجعه لصفحة اللوجين مع رسالة خطأ
-                return Redirect($"{frontendUrl}/login?status=error&message=invalid_link");
-            }
-
-            try
-            {
-                var result = await _authWeb.ConfirmEmailAsync(userId, token);
-
-                if (result.Succeeded)
-                {
-                    // ✅ الصح: وجه المستخدم لصفحة اللوجين في الفرونت إند مع رسالة نجاح
-                    return Redirect($"{frontendUrl}/login?status=success");
-                }
-
-                // لو فشل التفعيل
-                return Redirect($"{frontendUrl}/login?status=error&message=confirmation_failed");
-            }
-            catch (Exception )
-            {
-                // لو حصل خطأ في السيرفر
-                return Redirect($"{frontendUrl}/login?status=error&message=server_error");
-            }
-        }
-
-        // =========================================================
-        //  4. إعادة إرسال التفعيل
-        // =========================================================
-        /// <summary>
-        /// Resends the email confirmation link to the specified email address.
-        /// </summary>
-        /// <param name="request">The request containing the email address.</param>
-        /// <returns>A success message indicating the email was sent.</returns>
-        /// <response code="200">Confirmation email sent successfully.</response>
-        /// <response code="400">If the email is invalid or user not found.</response>
         [HttpPost("resend-confirmation")]
         [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest request)
         {
             try
             {
                 await _authWeb.ResendConfirmationEmailAsync(request.Email);
-                return Ok(new { Message = "Confirmation email sent successfully." });
+                return Ok(new { Message = "If the email exists, a verification OTP has been sent." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { Error = ex.Message });
             }
             catch (ArgumentException ex)
             {
@@ -272,7 +234,7 @@ namespace WebApi.Controllers
         }
 
         // =========================================================
-        //  7. FORGOT PASSWORD
+        //  7. FORGOT PASSWORD (OTP)
         // =========================================================
         /// <summary>
         /// Initiates the password reset process by generating a reset token and sending it via email.
@@ -288,8 +250,6 @@ namespace WebApi.Controllers
         /// </remarks>
         [HttpPost("forgot-password")]
         [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> ForgotPassword(
             [FromBody] ForgotPasswordRequest request,
             [FromServices] IValidator<ForgotPasswordRequest> validator)
@@ -297,26 +257,30 @@ namespace WebApi.Controllers
             var valResult = await validator.ValidateAsync(request);
             if (!valResult.IsValid) return BadRequest(valResult.ToDictionary());
 
-            // استلام التوكن من السيرفيس
-            var token = await _authWeb.GeneratePasswordResetTokenAsync(request.Email);
-
-            // إرجاع التوكن للتيست (يمكن إزالته في الإنتاج)
-            return Ok(new
+            try
             {
-                Message = "If the email exists, a reset link has been sent.",
-                TestToken = token
-            });
+                await _authWeb.GeneratePasswordResetTokenAsync(request.Email);
+                return Ok(new { Message = "If the email exists, a password reset OTP has been sent." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { Error = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
         }
 
         // =========================================================
-        //  9. RESET PASSWORD
+        //  8. RESET PASSWORD (New Endpoint ✅)
         // =========================================================
         /// <summary>
-        /// Resets a user's password using the provided reset token.
+        /// Resets the password for a user using a valid reset token and new password.
         /// </summary>
-        /// <param name="request">The request containing email, token, and new password.</param>
+        /// <param name="request">The request containing the reset token and new password.</param>
         /// <param name="validator">The validator for reset password requests.</param>
-        /// <returns>A success message if password is reset successfully.</returns>
+        /// <returns>A success message if the password is reset successfully.</returns>
         /// <response code="200">Password reset successfully.</response>
         /// <response code="400">If validation fails or password reset fails.</response>
         [HttpPost("reset-password")]
@@ -333,14 +297,11 @@ namespace WebApi.Controllers
             var result = await _authWeb.ResetPasswordAsync(request);
 
             if (!result.Succeeded)
-            {
                 return BadRequest(new { Error = string.Join(", ", result.Errors.Select(e => e.Description)) });
-            }
 
             return Ok(new { Message = "Password has been reset successfully. You can login now." });
         }
 
-       
         // =========================================================
         //  10. REFRESH TOKEN (New ✅)
         // =========================================================
@@ -505,6 +466,30 @@ namespace WebApi.Controllers
                 return BadRequest(new { Error = ex.Message });
             }
         }
+
+        // =========================================================
+        //  15. VERIFY EMAIL OTP
+        // =========================================================
+        /// <summary>
+        /// Confirms a user's email address using a 6-digit OTP code.
+        /// </summary>
+        /// 
+       // [HttpPost("verify-otp")] // alias backward compatibility
+        [HttpPost("verify-email-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Otp))
+                return BadRequest(new { Error = "Email and OTP are required." });
+
+            var result = await _authWeb.ConfirmEmailAsync(dto.Email, dto.Otp);
+
+            if (result.Succeeded)
+                return Ok(new { Message = "Email verified successfully." });
+
+            return BadRequest(new { Error = "Invalid or expired OTP." });
+        }
+
         
     }
 }

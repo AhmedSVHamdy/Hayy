@@ -138,7 +138,7 @@ namespace WebApi.Controllers
         /// This endpoint is designed for mobile deep linking. It returns an HTML page that automatically
         /// redirects to the mobile app using the configured URL scheme (e.g., hayy://confirm-email).
         /// </remarks>
-        [HttpGet("confirm-email-redirect")]
+        [HttpPost("confirm-email-redirect")]
         [AllowAnonymous]
         public async Task<IActionResult> ConfirmEmailRedirect(string userId, string token)
         {
@@ -184,8 +184,12 @@ namespace WebApi.Controllers
         {
             try
             {
-                var result = await _authService.GeneratePasswordResetTokenAsync(request.Email);
-                return Ok(new { Message = "If email exists, reset link sent." });
+                await _authService.GeneratePasswordResetTokenAsync(request.Email);
+                return Ok(new { Message = "If email exists, password reset OTP sent." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { Error = ex.Message });
             }
             catch (Exception ex)
             {
@@ -207,7 +211,7 @@ namespace WebApi.Controllers
         /// This endpoint is designed to be accessed from email links and redirects to the mobile app
         /// using a deep link containing the email and reset token.
         /// </remarks>
-        [HttpGet("reset-password-redirect")]
+        [HttpPost("reset-password-redirect")]
         [AllowAnonymous]
         public IActionResult ResetPasswordRedirect(string email, string token)
         {
@@ -312,7 +316,11 @@ namespace WebApi.Controllers
             try
             {
                 await _authService.ResendConfirmationEmailAsync(request.Email!);
-                return Ok(new { Message = "Sent" });
+                return Ok(new { Message = "If email exists, verification OTP sent." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { Error = ex.Message });
             }
             catch (ArgumentException ex)
             {
@@ -412,6 +420,70 @@ namespace WebApi.Controllers
             // هيدخل هنا كـ User عادي
             var response = await _authService.GoogleLoginAsync(socialDto);
             return Ok(response);
+        }
+
+        // =========================
+        // 14. VERIFY EMAIL OTP
+        // =========================
+        /// <summary>
+        /// Verifies the email OTP (One Time Password) for the user.
+        /// </summary>
+        /// <param name="dto">The DTO containing email and OTP.</param>
+        /// <returns>A success message if the OTP is valid and email is verified.</returns>
+        /// <response code="200">Email verified successfully.</response>
+        /// <response code="400">If the OTP is invalid or expired.</response>        
+       // [HttpPost("verify-otp")] // alias for backward compatibility
+        [HttpPost("verify-email-otp")]        
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyEmailOtp([FromBody] VerifyOtpDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Otp))
+                return BadRequest(new { Error = "Email and OTP are required." });
+
+            var result = await _authService.ConfirmEmailAsync(dto.Email, dto.Otp);
+
+            if (result.Succeeded)
+                return Ok(new { Message = "Email verified successfully." });
+
+            return BadRequest(new { Error = "Invalid or expired OTP." });
+        }
+        /// <summary>
+        /// Handles requests to confirm email redirection. This endpoint is deprecated and should not be used for email
+        /// verification.
+        /// </summary>
+        /// <remarks>This endpoint is no longer supported. Clients should use the POST
+        /// /api/app/auth/verify-email-otp endpoint for email verification purposes.</remarks>
+        /// <returns>A BadRequest result containing an error message indicating that the endpoint is deprecated and recommending
+        /// the use of POST /api/app/auth/verify-email-otp instead.</returns>
+        [HttpGet("confirm-email-redirect")]
+        [AllowAnonymous]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public IActionResult ConfirmEmailRedirect()
+        {
+            return BadRequest(new
+            {
+                Error = "Deprecated. Use POST /api/app/auth/verify-email-otp"
+            });
+        }
+
+        /// <summary>
+        /// Handles password reset requests using a deprecated endpoint. This method is no longer supported and should
+        /// not be used in new implementations.
+        /// </summary>
+        /// <remarks>This endpoint is deprecated and excluded from API documentation. Users should
+        /// initiate password resets using the OTP flow via the 'forgot-password' and 'reset-password'
+        /// endpoints.</remarks>
+        /// <returns>A BadRequest result containing an error message indicating that the method is deprecated and advising the
+        /// use of the OTP-based password reset flow.</returns>
+        [HttpGet("reset-password-redirect")]
+        [AllowAnonymous]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public IActionResult ResetPasswordRedirect()
+        {
+            return BadRequest(new
+            {
+                Error = "Deprecated. Use OTP flow: forgot-password + reset-password"
+            });
         }
     }
 }

@@ -29,6 +29,7 @@ builder.Services.AddCoreServices(builder.Configuration);
 // ==========================================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddMemoryCache();
 
 // إعدادات Swagger
 builder.Services.AddSwaggerGen(options =>

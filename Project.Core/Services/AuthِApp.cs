@@ -2,6 +2,7 @@
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration; // 👈 مهم
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
@@ -25,6 +26,7 @@ namespace Project.Core.Services
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMemoryCache _cache;
 
         public AuthApp(
             UserManager<User> userManager,
@@ -36,7 +38,8 @@ namespace Project.Core.Services
             IHttpContextAccessor httpContextAccessor,
             IJwtService jwtService,
             IConfiguration configuration,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IMemoryCache cache)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -48,6 +51,7 @@ namespace Project.Core.Services
             _jwtService = jwtService;
             _configuration = configuration;
             _unitOfWork = unitOfWork;
+            _cache = cache;
         }
 
         // ==========================================================
@@ -221,21 +225,24 @@ namespace Project.Core.Services
         // ==========================================================
         public async Task<IdentityResult> ConfirmEmailAsync(string userId, string token)
         {
-            var user = await _userManager.FindByIdAsync(userId);
+            // userId هنا = email (للحفاظ على نفس الـ interface)
+            var user = await _userManager.FindByEmailAsync(userId);
             if (user == null)
-            {
                 return IdentityResult.Failed(new IdentityError { Description = "User not found" });
-            }
 
-            var result = await _userManager.ConfirmEmailAsync(user, token);
-            if (result.Succeeded)
-            {
-                // Custom Flag Update
-                user.IsVerified = true;
-                await _userManager.UpdateAsync(user);
-            }
+            var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(
+                user,
+                TokenOptions.DefaultEmailProvider,
+                token);
 
-            return result;
+            if (!isValidOtp)
+                return IdentityResult.Failed(new IdentityError { Description = "Invalid or expired OTP." });
+
+            user.IsVerified = true;
+            user.EmailConfirmed = true;
+            await _userManager.UpdateAsync(user);
+
+            return IdentityResult.Success;
         }
 
         // ==========================================================
@@ -256,24 +263,18 @@ namespace Project.Core.Services
         public async Task<string?> GeneratePasswordResetTokenAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
-            if (user == null) return null; // Security: Don't reveal user existence
+            if (user == null) return null;
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            EnforceOtpRateLimit(email, "app-password-reset");
 
-            // Prepare Link Logic
-            var encodedToken = Uri.EscapeDataString(token);
-            var encodedEmail = Uri.EscapeDataString(user.Email!);
-            var baseUrl = GetBaseUrl();
-
-            // Link points to Controller, which redirects to App Scheme
-            var resetLink = $"{baseUrl}/api/app/auth/reset-password-redirect?email={encodedEmail}&token={encodedToken}";
+            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
 
             var message = $@"
                 <h3>Reset Password</h3>
-                <p>Click here to reset your password:</p>
-                <a href='{resetLink}'>Reset Password</a>";
+                <p>Your reset OTP is:</p>
+                <h1>{otp}</h1>";
 
-            await _emailService.SendEmailAsync(user.Email!, "Reset Your Password", message);
+            await _emailService.SendEmailAsync(user.Email!, "Reset Password OTP", message);
             return "Email sent";
         }
 
@@ -288,11 +289,20 @@ namespace Project.Core.Services
             if (request.NewPassword != request.ConfirmPassword)
                 return IdentityResult.Failed(new IdentityError { Description = "Passwords do not match" });
 
-            var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+            // request.Token هنا OTP
+            var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(
+                user,
+                TokenOptions.DefaultEmailProvider,
+                request.Token);
+
+            if (!isValidOtp)
+                return IdentityResult.Failed(new IdentityError { Description = "Invalid or expired OTP." });
+
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
 
             if (result.Succeeded)
             {
-                // Security: Revoke Refresh Token
                 user.RefreshToken = null;
                 user.RefreshTokenExpirationDateTime = DateTime.MinValue;
                 await _userManager.UpdateAsync(user);
@@ -371,13 +381,13 @@ namespace Project.Core.Services
             }
 
             //. (اختياري) حذف الصورة من السيرفر لو موجودة
-            
+
             if (!string.IsNullOrEmpty(user.ProfileImage))
             {
                 var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", user.ProfileImage);
                 if (File.Exists(imagePath)) File.Delete(imagePath);
             }
-            
+
 
             // 3. حذف المستخدم (سيقوم تلقائياً بحذف الـ Claims والـ Roles المرتبطة به)
             var result = await _userManager.DeleteAsync(user);
@@ -390,20 +400,16 @@ namespace Project.Core.Services
         // ==========================================================
         private async Task SendConfirmationEmailHelper(User user)
         {
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            EnforceOtpRateLimit(user.Email!, "app-email-verification");
 
-            var encodedToken = Uri.EscapeDataString(token);
-            var encodedUserId = Uri.EscapeDataString(user.Id.ToString());
-            var baseUrl = GetBaseUrl();
-
-            var confirmLink = $"{baseUrl}/api/app/auth/confirm-email-redirect?userId={encodedUserId}&token={encodedToken}";
+            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
 
             var message = $@"
                 <h3>Welcome!</h3>
-                <p>Please confirm your email by clicking below:</p>
-                <a href='{confirmLink}'>Verify Email</a>";
+                <p>Your verification OTP is:</p>
+                <h1>{otp}</h1>";
 
-            await _emailService.SendEmailAsync(user.Email!, "Verify your email", message);
+            await _emailService.SendEmailAsync(user.Email!, "Verify your email (OTP)", message);
         }
 
 
@@ -478,19 +484,19 @@ namespace Project.Core.Services
                 }
 
                 // (اختياري) إضافة Role لو بتستخدم RoleManager
-                 await _userManager.AddToRoleAsync(user, role);
+                await _userManager.AddToRoleAsync(user, role);
             }
             else
             {
                 // 🔄 حالة مستخدم موجود: (Login)
                 // ممكن نحدث بياناته لو حابب (اختياري)
-                
+
                 if (user.ProfileImage != payload.Picture)
                 {
                     user.ProfileImage = payload.Picture;
                     await _userManager.UpdateAsync(user);
                 }
-                
+
             }
 
             // 3. إنشاء التوكن (JWT)
@@ -512,6 +518,40 @@ namespace Project.Core.Services
             return $"{request.Scheme}://{request.Host}";
         }
 
-      
+
+        private const int MaxOtpRequestsPerHour = 5;
+        private static readonly TimeSpan OtpWindow = TimeSpan.FromHours(1);
+
+        private sealed class OtpRateState
+        {
+            public int Count { get; set; }
+            public DateTime WindowStartUtc { get; set; }
+        }
+
+        private void EnforceOtpRateLimit(string email, string purpose)
+        {
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+            var cacheKey = $"otp-rate:{purpose}:{normalizedEmail}";
+            var now = DateTime.UtcNow;
+
+            var state = _cache.GetOrCreate(cacheKey, entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = OtpWindow;
+                return new OtpRateState { Count = 0, WindowStartUtc = now };
+            })!;
+
+            if (now - state.WindowStartUtc >= OtpWindow)
+            {
+                state.Count = 0;
+                state.WindowStartUtc = now;
+            }
+
+            if (state.Count >= MaxOtpRequestsPerHour)
+                throw new InvalidOperationException("OTP limit reached. Please try again after 1 hour.");
+
+            state.Count++;
+            _cache.Set(cacheKey, state, OtpWindow);
+        }
     }
+            
 }

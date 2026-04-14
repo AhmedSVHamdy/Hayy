@@ -83,6 +83,7 @@ namespace Project.Core.Services
                     TargetType = TargetType.Post,
                     TargetId = dto.PostId,
                     CategoryId = categoryId, // ممكن تجيبه من الـ Place لو عايز دقة أكتر
+                    Details = $"اليوزر عمل لايك على بوست ",
                     TagId = post.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>(),
                     UserTopInterestCategoryId = userTopCategoryId,
                     UserInterestTagIds = userTagIds
