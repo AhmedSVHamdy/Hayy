@@ -49,7 +49,7 @@ namespace Project.Core.Services
 
             // 👇 السطر اللي بيكشف المستور
             // اطبع القيمة دي في الـ Console قبل الحفظ مباشرة
-            await _placeRepo.AddAsync(place);
+           await _placeRepo.AddAsync(place);
             //await _unitOfWork.SaveChangesAsync();
 
             // 3. إضافة الوسوم (Tags Logic)
@@ -85,6 +85,15 @@ namespace Project.Core.Services
 
             return response;
         }
+        public async Task<IEnumerable<PlaceResponseDto>> GetPlacesByCategoryIdAsync(Guid categoryId)
+        {
+            // 1. بننادي على الـ Repo عشان يجيب الأماكن
+            var places = await _placeRepo.GetByCategoryIdAsync(categoryId);
+
+            // 2. بنعمل Mapping باستخدام AutoMapper
+            return _mapper.Map<IEnumerable<PlaceResponseDto>>(places);
+        }
+
 
         public async Task<PlaceResponseDto?> GetPlaceByIdAsync(Guid id)
         {

@@ -10,7 +10,7 @@ namespace WebApi.Controllers
 {
    
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/Places")]
     public class PlacesController : ControllerBase
     {
         private readonly IPlaceService _placeService;
@@ -74,6 +74,22 @@ namespace WebApi.Controllers
         public async Task<IActionResult> GetAll()
         {
             var places = await _placeService.GetAllPlacesAsync();
+            return Ok(places);
+        }
+
+        [HttpGet("category/{categoryId}")] 
+        public async Task<IActionResult> GetPlacesByCategoryIdAsync(Guid categoryId)
+        {
+            // 1. استدعاء الدالة من الـ Service
+            var places = await _placeService.GetPlacesByCategoryIdAsync(categoryId);
+
+            // 2. التحقق لو مفيش أماكن (اختياري: ممكن ترجع قائمة فاضية أو NotFound)
+            if (places == null || !places.Any())
+            {
+                return NotFound($"لا توجد أماكن مرتبطة بالتصنيف المعرف بـ: {categoryId}");
+            }
+
+            // 3. إرجاع البيانات بنجاح
             return Ok(places);
         }
     }
