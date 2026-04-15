@@ -462,7 +462,7 @@ namespace Project.Core.Services
                     CreatedAt = DateTime.UtcNow,   // تاريخ الإنشاء
 
                     // تهيئة القوائم لتجنب Null Reference لاحقاً
-                    Businesses = new List<Business>(),
+                    
                     Reviews = new List<Review>()
                 };
 

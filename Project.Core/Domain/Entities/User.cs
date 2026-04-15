@@ -18,7 +18,8 @@ namespace Project.Core.Domain.Entities
 
 
         public UserSettings? UserSettings { get; set; }
-        public ICollection<Business> Businesses { get; set; } = new List<Business>();
+        public Business? Business { get; set; }
+
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
         public ICollection<PostComment> PostComments { get; set; } = new List<PostComment>();
         public ICollection<PostLike> PostLikes { get; set; } = new List<PostLike>();

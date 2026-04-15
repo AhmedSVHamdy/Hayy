@@ -110,7 +110,8 @@ namespace Project.Core.Services
                 RefreshToken = jwtResult.RefreshToken,
                 RefreshTokenExpirationDateTime = jwtResult.RefreshTokenExpirationDateTime,
                 UserType = user.UserType,
-                VerificationStatus = currentStatus
+                VerificationStatus = currentStatus,
+                Id = user.Id
             };
         }
 
