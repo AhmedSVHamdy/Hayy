@@ -23,7 +23,7 @@ namespace Project.Infrastructure.Configuration
 
             // 1. علاقة المستخدم (User)
             builder.HasOne(x => x.User)
-                   .WithOne()
+                   .WithOne(u => u.Business) // ✅ اربطها بالـ navigation
                    .HasForeignKey<Business>(x => x.UserId)
                    .OnDelete(DeleteBehavior.Restrict);
 
