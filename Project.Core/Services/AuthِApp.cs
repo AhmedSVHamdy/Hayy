@@ -265,7 +265,7 @@ namespace Project.Core.Services
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null) return null;
 
-            EnforceOtpRateLimit(email, "app-password-reset");
+           // EnforceOtpRateLimit(email, "app-password-reset");
 
             var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
 
@@ -400,7 +400,7 @@ namespace Project.Core.Services
         // ==========================================================
         private async Task SendConfirmationEmailHelper(User user)
         {
-            EnforceOtpRateLimit(user.Email!, "app-email-verification");
+           // EnforceOtpRateLimit(user.Email!, "app-email-verification");
 
             var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
 
@@ -519,39 +519,39 @@ namespace Project.Core.Services
         }
 
 
-        private const int MaxOtpRequestsPerHour = 5;
-        private static readonly TimeSpan OtpWindow = TimeSpan.FromHours(1);
+        //private const int MaxOtpRequestsPerHour = 5;
+        //private static readonly TimeSpan OtpWindow = TimeSpan.FromHours(1);
 
-        private sealed class OtpRateState
-        {
-            public int Count { get; set; }
-            public DateTime WindowStartUtc { get; set; }
-        }
+        //private sealed class OtpRateState
+        //{
+        //    public int Count { get; set; }
+        //    public DateTime WindowStartUtc { get; set; }
+        //}
 
-        private void EnforceOtpRateLimit(string email, string purpose)
-        {
-            var normalizedEmail = email.Trim().ToLowerInvariant();
-            var cacheKey = $"otp-rate:{purpose}:{normalizedEmail}";
-            var now = DateTime.UtcNow;
+        //private void EnforceOtpRateLimit(string email, string purpose)
+        //{
+        //    var normalizedEmail = email.Trim().ToLowerInvariant();
+        //    var cacheKey = $"otp-rate:{purpose}:{normalizedEmail}";
+        //    var now = DateTime.UtcNow;
 
-            var state = _cache.GetOrCreate(cacheKey, entry =>
-            {
-                entry.AbsoluteExpirationRelativeToNow = OtpWindow;
-                return new OtpRateState { Count = 0, WindowStartUtc = now };
-            })!;
+        //    var state = _cache.GetOrCreate(cacheKey, entry =>
+        //    {
+        //        entry.AbsoluteExpirationRelativeToNow = OtpWindow;
+        //        return new OtpRateState { Count = 0, WindowStartUtc = now };
+        //    })!;
 
-            if (now - state.WindowStartUtc >= OtpWindow)
-            {
-                state.Count = 0;
-                state.WindowStartUtc = now;
-            }
+        //    if (now - state.WindowStartUtc >= OtpWindow)
+        //    {
+        //        state.Count = 0;
+        //        state.WindowStartUtc = now;
+        //    }
 
-            if (state.Count >= MaxOtpRequestsPerHour)
-                throw new InvalidOperationException("OTP limit reached. Please try again after 1 hour.");
+        //    if (state.Count >= MaxOtpRequestsPerHour)
+        //        throw new InvalidOperationException("OTP limit reached. Please try again after 1 hour.");
 
-            state.Count++;
-            _cache.Set(cacheKey, state, OtpWindow);
-        }
+        //    state.Count++;
+        //    _cache.Set(cacheKey, state, OtpWindow);
+        //}
     }
             
 }

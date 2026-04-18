@@ -11,9 +11,8 @@
     }
     public enum EventStatus
     {
-        Active,
-        Cancelled,
-        Completed
-        
+        Active = 0,
+        Cancelled =1,
+        Completed =2       
     }
 }

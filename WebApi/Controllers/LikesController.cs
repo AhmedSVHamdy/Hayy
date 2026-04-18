@@ -57,5 +57,36 @@ namespace WebApi.Controllers
                 return BadRequest(new { message = "حدث خطأ أثناء تسجيل الإعجاب.", details = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Retrieves all likes for a specific post along with user details.
+        /// </summary>
+        /// <param name="postId">The unique identifier of the post.</param>
+        /// <returns>A list of users who liked the post. Returns a message if no likes are found.</returns>
+        [HttpGet("post/{postId}")]
+        [Authorize] // أو خليها [Authorize] لو عايز اليوزرز المسجلين بس هما اللي يشوفوها
+        public async Task<IActionResult> GetPostLikes(Guid postId)
+        {
+            try
+            {
+                var likes = await _postLikeService.GetLikesByPostIdAsync(postId);
+
+                if (likes == null || !likes.Any())
+                {
+                    // رداً لطلبك السابق: لو مفيش لايكات نرجع رسالة توضيحية بدل مصفوفة فاضية
+                    return NotFound(new { Message = "لا توجد إعجابات لهذا البوست حتى الآن." });
+                }
+
+                return Ok(likes);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = "حدث خطأ أثناء جلب الإعجابات.", Details = ex.Message });
+            }
+        }
     }
 }

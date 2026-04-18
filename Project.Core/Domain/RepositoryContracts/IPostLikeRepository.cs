@@ -15,5 +15,8 @@ namespace Project.Core.Domain.RepositoryContracts
 
         // دالة تجيب عدد اللايكات للبوست
         Task<int> GetLikesCountAsync(Guid postId);
+
+        // ضيف السطر ده عشان يجيب كل اللايكات للبوست الواحد
+        Task<IEnumerable<PostLike>> GetLikesByPostIdAsync(Guid postId);
     }
 }

@@ -38,5 +38,13 @@ namespace Project.Infrastructure.Repositories
             _context.PostLikes.Remove(like);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<IEnumerable<PostLike>> GetLikesByPostIdAsync(Guid postId)
+        {
+            return await _context.PostLikes
+                .Include(l => l.User) // ضروري عشان نعرض اسم اليوزر وصورته
+                .Where(l => l.PostId == postId)
+                .ToListAsync();
+        }
     }
 }

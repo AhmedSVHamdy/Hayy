@@ -2,7 +2,6 @@
 {
     public enum ReferenceType
     {
-        None = 0,
         Place = 1,
         Event = 2,
         Offer = 3,

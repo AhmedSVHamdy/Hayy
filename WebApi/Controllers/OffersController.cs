@@ -115,5 +115,36 @@ namespace WebApi.Controllers
                 return BadRequest(new { Message = ex.Message });
             }
         }
+        /// <summary>
+        /// Retrieves a list of currently active offers available to users.
+        /// </summary>
+        /// <remarks>This method is accessible without authentication, allowing any user to view the
+        /// active offers.</remarks>
+        /// <returns>An IActionResult containing a list of active offers. The list will be empty if no offers are currently
+        /// active.</returns>
+        [HttpGet("active")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetActiveOffers()
+        {
+            try
+            {
+                var offers = await _offerService.GetActiveOffersAsync();
+
+                // التحقق مما إذا كانت القائمة فارغة
+                if (offers == null || !offers.Any())
+                {
+                    return NotFound(new { Message = "لا توجد عروض متاحه الان" });
+                }
+
+                return Ok(offers);
+            }
+            catch (Exception ex)
+            {
+                // التقاط أي أخطاء غير متوقعة وإرجاعها بشكل احترافي مثل باقي الـ Endpoints
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
     }
 }

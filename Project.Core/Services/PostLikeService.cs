@@ -101,6 +101,27 @@ namespace Project.Core.Services
                 LikesCount = newCount
             };
         }
+        // ضيف الدالة دي في كلاس PostLikeService
+        public async Task<IEnumerable<PostLikeUserDto>> GetLikesByPostIdAsync(Guid postId)
+        {
+            // 1. نتأكد إن البوست موجود الأول عشان نطلع رسالة واضحة لو مش موجود
+            var post = await _businessPostRepository.GetPostByIdAsync(postId);
+            if (post == null)
+                throw new KeyNotFoundException("البوست ده مش موجود! 🤷‍♂️");
+
+            // 2. نجيب اللايكات
+            var likes = await _postLikeRepository.GetLikesByPostIdAsync(postId);
+
+            // 3. Mapping (لو مش ضايفها في AutoMapper ممكن نعملها هنا يدوياً كده)
+            var mappedLikes = likes.Select(l => new PostLikeUserDto
+            {
+                UserId = l.UserId,
+                FullName = l.User?.FullName ?? "مستخدم غير معروف",
+                ProfileImage = l.User?.ProfileImage
+            });
+
+            return mappedLikes;
+        }
     }
     
 }

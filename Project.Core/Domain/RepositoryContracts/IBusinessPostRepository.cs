@@ -12,7 +12,10 @@ namespace Project.Core.Domain.RepositoryContracts
         Task<BusinessPost?> GetPostByIdAsync(Guid postId);
 
         Task<List<BusinessPost>> GetPostsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize);
+        Task<List<BusinessPost>> GetAllPostsPagedAsync(int pageNumber, int pageSize);
         Task<int> GetCountByPlaceIdAsync(Guid placeId);
+        Task<int> GetTotalCountAsync();
+
         Task UpdateAsync(BusinessPost post);
         Task DeleteAsync(BusinessPost post);
     }
