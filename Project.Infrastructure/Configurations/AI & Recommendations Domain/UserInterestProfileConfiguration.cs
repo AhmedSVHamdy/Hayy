@@ -15,7 +15,6 @@ namespace Project.Infrastructure.Configurations
 
             builder.HasKey(X => X.Id);
 
-
             // InterestScore: درجة اهتمام المستخدم (رقم عشري)
             builder.Property(X => X.InterestScore)
                    .IsRequired()
@@ -29,7 +28,6 @@ namespace Project.Infrastructure.Configurations
             // بما أنها Guid? فالـ EF Core يفهم تلقائياً أنها تقبل Null
             builder.Property(X => X.CategoryId).IsRequired(false);
             builder.Property(X => X.TagId).IsRequired(false);
-
             
             // نضع Index لتسريع عملية البحث عن اهتمامات مستخدم معين بتصنيف معين
             builder.HasIndex(X => X.UserId);
@@ -40,10 +38,9 @@ namespace Project.Infrastructure.Configurations
 
             // العلاقة مع User
             builder.HasOne(X => X.User)
-                   .WithMany() // المستخدم لديه اهتمامات كثيرة
+                   .WithMany(u => u.UserInterestProfiles) // ✅ التعديل هنا: لتجنب ظهور UserId1
                    .HasForeignKey(X => X.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
-
         }
     }
 }

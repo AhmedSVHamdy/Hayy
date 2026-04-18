@@ -2,8 +2,6 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Project.Core.Domain.Entities;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Project.Infrastructure.Configurations.User_Domain
 {
@@ -11,31 +9,23 @@ namespace Project.Infrastructure.Configurations.User_Domain
     {
         public void Configure(EntityTypeBuilder<User> builder)
         {
+            // 1. الحفاظ على اسم الجدول كما هو في قاعدة بياناتك
             builder.ToTable("Users");
 
-            // 2. المفتاح الأساسي
-            builder.HasKey(X => X.Id);
+            // 2. إرجاع إعدادات Identity الأساسية اللي مابقيناش عايزين نغيرها
+            builder.Property(X => X.Email).IsRequired().HasMaxLength(150);
+            builder.HasIndex(X => X.Email).IsUnique();
+            builder.Property(X => X.PasswordHash).IsRequired();
 
-            // 3. إعدادات الخصائص
+            // 3. باقي الخصائص
             builder.Property(X => X.FullName)
                    .IsRequired()
                    .HasMaxLength(100);
 
-            builder.Property(X => X.Email)
-                   .IsRequired()
-                   .HasMaxLength(150);
-
-            builder.HasIndex(X => X.Email).IsUnique();
-
-            builder.Property(X => X.PasswordHash)
-                   .IsRequired(); // تخزن هنا الـ Hash وليس الباسورد الصريح
-
             builder.Property(X => X.UserType)
-                   .HasConversion<string>()
                    .HasMaxLength(50)
-                   .IsRequired();
+                   .IsRequired(); // شلنا HasConversion<string> لأنك في الـ User عاملها string مش Enum
 
-            //Nullable Strings
             builder.Property(X => X.ProfileImage)
                    .HasMaxLength(500)
                    .IsRequired(false);
@@ -50,13 +40,24 @@ namespace Project.Infrastructure.Configurations.User_Domain
             builder.Property(X => X.CreatedAt)
                    .IsRequired();
 
-            // Relationships
+            // Refresh Tokens
+            builder.Property(x => x.RefreshToken)
+                   .HasMaxLength(500)
+                   .IsRequired(false);
 
-            // علاقة 1:1 مع إعدادات المستخدم (User -> UserSettings)
+            builder.Property(x => x.RefreshTokenExpirationDateTime)
+                   .IsRequired(true);
+
+            // 4. العلاقات (التي تم تصحيحها لعدم تكرار UserId)
             builder.HasOne(X => X.UserSettings)
                    .WithOne(X => X.User)
                    .HasForeignKey<UserSettings>(X => X.UserId)
-                   .OnDelete(DeleteBehavior.Cascade);
+                   .OnDelete(DeleteBehavior.Cascade); // لو اتحذف اليوزر تتحذف إعداداته
+
+            builder.HasOne(x => x.Business)
+                   .WithOne(b => b.User)
+                   .HasForeignKey<Business>(b => b.UserId)
+                   .OnDelete(DeleteBehavior.Restrict); // من الأفضل منع الحذف المتتالي عشان الفواتير والبيانات
         }
     }
 }

@@ -98,5 +98,14 @@ namespace Project.Infrastructure.Repositories
 
             return await query.ToListAsync();
         }
+
+        public async Task<IEnumerable<Place>> GetByCategoryIdAsync(Guid categoryId)
+        {
+            return await _context.Places
+                .AsNoTracking()
+                .Include(p => p.Category)
+                .Where(p => p.CategoryId == categoryId)
+                .ToListAsync();
+        }
     }
 }

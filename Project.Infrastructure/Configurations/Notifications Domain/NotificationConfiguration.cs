@@ -48,7 +48,7 @@ namespace Project.Infrastructure.Configurations
 
             // العلاقة مع  User
             builder.HasOne(X => X.User)
-                   .WithMany() // المستخدم لديه إشعارات كثيرة، عادة لا نضع قائمة Notifications في كلاس User لتخفيف الحمل
+                   .WithMany(u => u.Notifications) // ✅ التعديل هنا: ربطناها بالليستة اللي في اليوزر عشان ميعملش UserId1
                    .HasForeignKey(X => X.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
         }

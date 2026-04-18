@@ -37,7 +37,7 @@ namespace Project.Infrastructure.Configuration
 
             // العلاقات
             builder.HasOne(X => X.Place)
-                   .WithMany() // لم يظهر في كلاس Place قائمة Events، نتركها فارغة أو نعدلها لاحقاً
+                   .WithMany(p => p.Events) // ✅ ظبطت
                    .HasForeignKey(X => X.PlaceId)
                    .OnDelete(DeleteBehavior.Restrict);
 

@@ -15,7 +15,6 @@ namespace Project.Infrastructure.Configurations
 
             builder.HasKey(X => X.Id);
 
-
             builder.Property(X => X.ItemType)
                    .HasConversion<string>()
                    .HasMaxLength(50)
@@ -49,7 +48,7 @@ namespace Project.Infrastructure.Configurations
 
             // العلاقة مع User
             builder.HasOne(X => X.User)
-                   .WithMany() 
+                   .WithMany(u => u.RecommendedItems) // ✅ التعديل الأخير: ربطناها بالليستة عشان نتجنب UserId1
                    .HasForeignKey(X => X.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
         }

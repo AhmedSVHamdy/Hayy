@@ -15,12 +15,6 @@
 
 		<!-- ✅ حدّث Swashbuckle لإصدار يدعم OpenApi 2.0 -->
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
-
-		
-		
-
-		
-
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

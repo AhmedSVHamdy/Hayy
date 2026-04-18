@@ -29,7 +29,7 @@ namespace Project.Infrastructure.Configurations
                    .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(X => X.User)
-                   .WithMany()
+                   .WithMany(u => u.PostComments) // ✅ التعديل هنا: قولّه يربط الـ User بالـ PostComments بتاعته
                    .HasForeignKey(X => X.UserId)
                    .OnDelete(DeleteBehavior.Cascade); 
 

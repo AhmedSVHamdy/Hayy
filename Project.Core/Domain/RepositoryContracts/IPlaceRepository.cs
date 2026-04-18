@@ -15,5 +15,6 @@ namespace Project.Core.Domain.RepositoryContracts
 
         Task UpdatePlaceRatingAsync(Guid placeId);
         Task<List<Place>> SearchPlacesAsync(string searchTerm, Guid? categoryId);
+        Task<IEnumerable<Place>> GetByCategoryIdAsync(Guid categoryId);
     }
 }

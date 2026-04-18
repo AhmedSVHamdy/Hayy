@@ -24,7 +24,7 @@ namespace Project.Infrastructure.Configurations
 
             // 2. العلاقة مع User
             builder.HasOne(X => X.User)
-                   .WithMany()
+                   .WithMany(u => u.PostLikes) // ✅ التعديل هنا لتجنب UserId1
                    .HasForeignKey(X => X.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
         }

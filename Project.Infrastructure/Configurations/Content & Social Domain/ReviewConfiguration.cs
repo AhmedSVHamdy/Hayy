@@ -40,7 +40,7 @@ namespace Project.Infrastructure.Configurations
 
             //  العلاقة معUser
             builder.HasOne(X => X.User)
-                   .WithMany() 
+                   .WithMany(u => u.Reviews) // ✅ التعديل هنا لتجنب UserId1
                    .HasForeignKey(X => X.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
         }
