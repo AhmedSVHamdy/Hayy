@@ -36,12 +36,6 @@ namespace Project.Infrastructure.Configuration
 
             builder.Property(x => x.IsActive)
                    .HasDefaultValue(true);
-
-            // Relationships Configuration
-            builder.HasMany(x => x.BusinessPlans)
-               .WithOne()
-               .HasForeignKey("SubscriptionPlanId")
-               .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -42,7 +42,7 @@ namespace Project.Infrastructure.Configuration
 
             // Relationships Configuration
             builder.HasOne(X => X.Place)
-                   .WithMany()
+                   .WithMany(p => p.Offers) // ✅ ظبطت
                    .HasForeignKey(X => X.PlaceId)
                    .OnDelete(DeleteBehavior.Cascade);
         }

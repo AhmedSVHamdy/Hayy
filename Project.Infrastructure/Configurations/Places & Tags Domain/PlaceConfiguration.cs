@@ -40,7 +40,7 @@ namespace Project.Infrastructure.Configuration
 
             // العلاقات
             builder.HasOne(X => X.Business)
-                   .WithMany() // إذا كان للـ Business قائمة Places، ضعها هنا: WithMany(b => b.Places)
+                   .WithMany(b => b.Places)
                    .HasForeignKey(X => X.BusinessId)
                    .OnDelete(DeleteBehavior.Restrict);
 

@@ -46,9 +46,9 @@ namespace Project.Infrastructure.Configuration
                    .IsRequired();
 
             // Relationships Configuration
-            //
+            
             builder.HasOne(X => X.User)
-                   .WithMany() 
+                   .WithMany(u => u.EventBookings) // ✅ التعديل هنا: ضفنا اسم الليستة اللي في اليوزر
                    .HasForeignKey(X => X.UserId)
                    .OnDelete(DeleteBehavior.Restrict); 
 

@@ -30,15 +30,17 @@ namespace Project.Infrastructure.Configuration
                    .IsRequired();
 
             // Relationships Configuration
+            // علاقة البيزنس
             builder.HasOne(x => x.Business)
-               .WithMany() 
-               .HasForeignKey(x => x.BusinessId) 
-               .OnDelete(DeleteBehavior.Restrict); // لمنع حذف الشركة إذا كان لديها خطط
+                   .WithMany(b => b.BusinessPlans) // ✅ اتصلحت
+                   .HasForeignKey(x => x.BusinessId) 
+                   .OnDelete(DeleteBehavior.Restrict); // لمنع حذف الشركة إذا كان لديها خطط
 
             
+            // علاقة خطة الاشتراك
             builder.HasOne(x => x.SubscriptionPlan)
-                   .WithMany(x => x.BusinessPlans) 
-                   .HasForeignKey(x => x.PlanId) 
+                   .WithMany(sp => sp.BusinessPlans) // ✅ اتصلحت
+                   .HasForeignKey(x => x.PlanId) // ⚠️ تأكد إن Foreign Key اسمه PlanId مش SubscriptionPlanId
                    .OnDelete(DeleteBehavior.Restrict);
 
             

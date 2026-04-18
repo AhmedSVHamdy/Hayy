@@ -29,7 +29,7 @@ namespace Project.Infrastructure.Configurations
 
             // العلاقة مع  User
             builder.HasOne(X => X.User)
-                   .WithMany() // أو WithMany(u => u.PlaceFollows) إذا كانت موجودة في User
+                   .WithMany(u => u.PlaceFollows) // ✅ التعديل هنا: لتجنب ظهور UserId1
                    .HasForeignKey(X => X.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
         }
