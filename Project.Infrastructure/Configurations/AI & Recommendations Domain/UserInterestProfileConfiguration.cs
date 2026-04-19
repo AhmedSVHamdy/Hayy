@@ -34,8 +34,17 @@ namespace Project.Infrastructure.Configurations
             builder.HasIndex(X => X.CategoryId);
             builder.HasIndex(X => X.TagId);
 
-            // Relationships
+            // منع تكرار نفس الكاتيجوري لنفس اليوزر 
+            builder.HasIndex(X => new { X.UserId, X.CategoryId })
+                   .IsUnique()
+                   .HasFilter("[CategoryId] IS NOT NULL");
 
+            // منع تكرار نفس التاج لنفس اليوزر
+            builder.HasIndex(X => new { X.UserId, X.TagId })
+                   .IsUnique()
+                   .HasFilter("[TagId] IS NOT NULL");
+
+            // Relationships
             // العلاقة مع User
             builder.HasOne(X => X.User)
                    .WithMany(u => u.UserInterestProfiles) // ✅ التعديل هنا: لتجنب ظهور UserId1

@@ -25,8 +25,10 @@ public partial class HayyContext : IdentityDbContext<User, ApplicationRole, Guid
         OnModelCreatingPartial(modelBuilder);
         base.OnModelCreating(modelBuilder);
 
-        //modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(HayyContext).Assembly);
+
+        // 👇 مهم جداً: UserLog أصبح Mongo only
+        modelBuilder.Ignore<UserLog>();
     }
 
 
@@ -67,7 +69,6 @@ public partial class HayyContext : IdentityDbContext<User, ApplicationRole, Guid
 
     // AI & Recommendations
     public DbSet<UserInterestProfile> UserInterestProfiles { get; set; } = null!;
-    public DbSet<RecommendedItem> RecommendedItems { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
 
 
