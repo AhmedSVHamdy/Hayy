@@ -17,8 +17,7 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// يبدأ عملية دفع جديدة لاشتراك بيزنس في باقة معينة.
-        /// يرجع PaymentKey اللي الـ Frontend بيستخدمه مع Paymob iFrame.
+        /// Initiates a payment process for a business subscription and returns a Paymob payment key.
         /// </summary>
         [HttpPost("initiate")]
         public async Task<IActionResult> InitiatePayment([FromBody] InitiatePaymentDto dto)
@@ -35,9 +34,8 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// Webhook endpoint بيستقبل رد Paymob بعد اكتمال العملية.
-        /// لازم يرجع 200 OK دايماً حتى لو حصل error عندنا،
-        /// عشان Paymob متبعتش الطلب تاني.
+        /// Receives Paymob webhook notifications and processes the transaction result.
+        /// Always returns 200 OK to prevent Paymob from resending the request.
         /// </summary>
         [HttpPost("webhook")]
         public async Task<IActionResult> PaymobWebhook([FromBody] PaymobWebhookDto dto, [FromQuery] string hmac)
