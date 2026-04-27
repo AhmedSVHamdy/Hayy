@@ -4,9 +4,6 @@ using System.Text;
  using Project.Core.DTO.Tags;
 namespace Project.Core.DTO.Places
 {
-   
-    
-
     public class PlaceResponseDto
     {
         public Guid Id { get; set; }

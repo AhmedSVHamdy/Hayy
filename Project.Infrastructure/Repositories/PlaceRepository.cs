@@ -79,6 +79,7 @@ namespace Project.Infrastructure.Repositories
                 .Include(p => p.PlaceTags).ThenInclude(pt => pt.Tag)
                 .AsQueryable();
 
+
             // 1. فلترة بالـ Category لو موجود
             if (categoryId.HasValue && categoryId.Value != Guid.Empty)
             {

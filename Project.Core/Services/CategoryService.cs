@@ -94,5 +94,16 @@ namespace Project.Core.Services
             var categories = await _categoryRepo.GetAllAsync();
             return _mapper.Map<IEnumerable<CategoryWithTagsDto>>(categories);
         }
+        public async Task<List<CategoryWithTagsDto>> GetAllCategoriesWithTagsAsync()
+        {
+            // 1. بنكلم الـ Repository يجيب الكاتيجوريز بالتاجات بتاعتها كاملة من الداتابيز
+            var categories = await _categoryRepo.GetAllWithTagsAsync();
+
+            // 2. الـ AutoMapper هياخد الداتا دي ويطبق عليها "السحر" اللي إنت كاتبه في الـ Profile
+            var result = _mapper.Map<List<CategoryWithTagsDto>>(categories);
+
+            return result;
+        }
+
     }
 }

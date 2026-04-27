@@ -72,5 +72,11 @@ namespace WebApi.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        [HttpGet("with-tags-Filters")]
+        public async Task<IActionResult> GetAllCategoriesWithTags()
+        {
+            var result = await _categoryService.GetAllCategoriesWithTagsAsync();
+            return Ok(result);
+        }
     }
 }

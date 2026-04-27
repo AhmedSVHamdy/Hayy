@@ -11,6 +11,7 @@ namespace Project.Core.ServiceContracts
         Task<CategoryWithTagsDto> CreateCategoryAsync(CreateCategoryDto dto);
         Task<CategoryWithTagsDto?> GetCategoryByIdAsync(Guid id);
         Task<IEnumerable<CategoryWithTagsDto>> GetAllCategoriesAsync();
+        Task<List<CategoryWithTagsDto>> GetAllCategoriesWithTagsAsync();
 
         // دالة ربط الوسوم
         Task<bool> AssignTagsToCategoryAsync(AssignTagsDto dto);
