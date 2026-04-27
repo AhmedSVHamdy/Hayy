@@ -7,12 +7,9 @@ using Project.Core.DTOs.Paymob;
 using Project.Core.Enums;
 using Project.Core.ServiceContracts;
 using Project.Core.Settings;
-using System;
-using System.Collections.Generic;
 using System.Net.Http.Json;
-using System.Security.Cryptography; // مهم عشان HMAC
+using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Project.Core.Services
 {
@@ -21,76 +18,52 @@ namespace Project.Core.Services
         private readonly HttpClient _httpClient;
         private readonly PaymobSettings _settings;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IEventBookingService _eventBookingService;
 
         public PaymentService(
             HttpClient httpClient,
             IOptions<PaymobSettings> settings,
-            IUnitOfWork unitOfWork,
-            IEventBookingService eventBookingService)
+            IUnitOfWork unitOfWork)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
             _unitOfWork = unitOfWork;
-            _eventBookingService = eventBookingService;
         }
 
         // =========================================================================
-        // الجزء الأول: بدء عملية الدفع (Initiation)
+        // الجزء الأول: بدء عملية الدفع
         // =========================================================================
         public async Task<string> InitiatePaymentAsync(InitiatePaymentDto dto)
         {
-            decimal amountToPay = 0;
+            // 1. جلب الباقة والتحقق منها
+            var plan = await _unitOfWork.SubscriptionPlans.GetByIdAsync(dto.PlanId);
+            if (plan == null)
+                throw new Exception("الباقة غير موجودة");
 
-            // 1. تحديد نوع الدفع (اشتراك ولا تذكرة؟)
-            if (dto.PlanId != Guid.Empty)
-            {
-                var plan = await _unitOfWork.SubscriptionPlans.GetByIdAsync(dto.PlanId);
-                if (plan == null) throw new Exception("الباقة غير موجودة");
+            decimal amountToPay = plan.Price;
 
-                // 👈 هنا بناخد الـ Price من الباقة مباشرة زي ما إنت عاوز
-                amountToPay = plan.Price;
-            }
-            else if (dto.EventBookingId != Guid.Empty)
-            {
-                var booking = await _unitOfWork.EventBookings.GetByIdAsync((Guid)dto.EventBookingId);
-                if (booking == null) throw new Exception("الحجز غير موجود");
-                if (booking.Status != BookingStatus.Pending) throw new Exception("الحجز ليس في حالة انتظار الدفع");
-
-                // هنا بنحسب السعر من الإيفنت
-                amountToPay = booking.TicketQuantity * booking.Event.Price;
-            }
-            else
-            {
-                throw new Exception("يجب تحديد باقة أو حجز للدفع.");
-            }
-            // 2. الخطوة الأولى: المصادقة مع Paymob
+            // 2. المصادقة مع Paymob
             var authToken = await GetAuthToken();
 
-            // 3. الخطوة الثانية: تسجيل الأوردر
-            // السعر في Paymob بالقروش (نضرب في 100)
+            // 3. تسجيل الأوردر عند Paymob (السعر بالقروش = نضرب × 100)
             string amountCents = (amountToPay * 100).ToString();
             var paymobOrderId = await RegisterOrder(authToken, amountCents);
 
-            // 4. الخطوة الثالثة: طلب مفتاح الدفع (Payment Key)
+            // 4. الحصول على مفتاح الدفع
             var paymentKey = await GetPaymentKey(authToken, paymobOrderId.ToString(), amountCents);
 
-            // 5. حفظ العملية في الداتابيز (Pending)
+            // 5. حفظ العملية في الداتابيز بحالة Pending
             var payment = new Payment
             {
                 Id = Guid.NewGuid(),
                 Amount = amountToPay,
                 Currency = "EGP",
-                PaymentMethod = "Card",
-                EventBookingId = dto.EventBookingId,
-                Status = "Pending",
+                PaymentMethod = PaymentMethod.CreditCard, // ✅ Enum
+                Status = PaymentStatus.Pending,           // ✅ Enum
                 TransactionDate = DateTime.UtcNow,
                 PaymobOrderId = paymobOrderId,
-                SubscriptionId = null,
-
-                // 🟢 التعديل الجديد: حفظ بيانات البيزنس والباقة
                 BusinessId = dto.BusinessId,
-                PlanId = dto.PlanId
+                PlanId = dto.PlanId,
+                SubscriptionId = null
             };
 
             await _unitOfWork.Payments.AddAsync(payment);
@@ -100,11 +73,11 @@ namespace Project.Core.Services
         }
 
         // =========================================================================
-        // الجزء الثاني: معالجة الرد (Webhook Processing)
+        // الجزء الثاني: معالجة رد Paymob (Webhook)
         // =========================================================================
         public async Task ProcessWebhookAsync(PaymobWebhookDto dto)
         {
-            // 1. التأمين: التحقق من HMAC Signature
+            // 1. التحقق من الـ HMAC لضمان إن الطلب قادم من Paymob فعلاً
             if (!ValidateHmac(dto))
                 throw new Exception("Invalid HMAC signature");
 
@@ -114,8 +87,9 @@ namespace Project.Core.Services
             // 2. البحث عن العملية في الداتابيز
             var payment = await _unitOfWork.Payments.GetByPaymobOrderIdAsync(paymobOrderId);
 
-            // لو مش موجودة أو حالتها اتغيرت قبل كده، نوقف
-            if (payment == null || payment.Status != "Pending") return;
+            // لو مش موجودة أو اتعالجت قبل كده → نتجاهل
+            if (payment == null || payment.Status != PaymentStatus.Pending) // ✅ Enum
+                return;
 
             // 3. تحديث بيانات العملية
             payment.PaymobTransactionId = transaction.Id;
@@ -123,39 +97,19 @@ namespace Project.Core.Services
 
             if (transaction.Success)
             {
-                payment.Status = "Success";
-
-                // 👈 بنتشك لو الـ PlanId مش فاضي
-                if (payment.PlanId != Guid.Empty && payment.PlanId != null)
-                {
-                    // ده اشتراك بيزنس
-                    await ActivateSubscriptionAsync(payment);
-                }
-                // 👈 بنتشك لو الـ EventBookingId مش فاضي
-                else if (payment.EventBookingId != Guid.Empty && payment.EventBookingId != null)
-                {
-                    var confirmDto = new ConfirmPaymentDto
-                    {
-                        BookingId = (Guid)payment.EventBookingId, // بنعمل كاستنج سريع للضمان
-                        TransactionId = transaction.Id.ToString(),
-                        PaymentMethod = PaymentMethod.CreditCard
-                    };
-
-                    await _eventBookingService.ConfirmPaymentAsync(Guid.Empty, confirmDto);
-                }
+                payment.Status = PaymentStatus.Completed; // ✅ Enum
+                await ActivateSubscriptionAsync(payment);
             }
             else
             {
-                // ❌ حالة الفشل
-                payment.Status = "Failed";
+                payment.Status = PaymentStatus.Failed;    // ✅ Enum
             }
 
-            // حفظ التغييرات النهائية
             await _unitOfWork.SaveChangesAsync();
         }
 
         // =========================================================================
-        // دوال مساعدة خاصة (Private Helpers)
+        // دوال مساعدة خاصة
         // =========================================================================
 
         private async Task ActivateSubscriptionAsync(Payment payment)
@@ -163,7 +117,6 @@ namespace Project.Core.Services
             var plan = await _unitOfWork.SubscriptionPlans.GetByIdAsync(payment.PlanId);
             if (plan == null) return;
 
-            // إنشاء اشتراك جديد
             var newSubscription = new BusinessSubscription
             {
                 Id = Guid.NewGuid(),
@@ -185,36 +138,34 @@ namespace Project.Core.Services
         {
             var data = dto.Obj;
 
-            // ترتيب البيانات ده إجباري من Paymob
+            // ترتيب الحقول ده إجباري من Paymob - لا تغيره
             string concatenatedString =
-               data.AmountCents.ToString() +
-               data.CreatedAt +
-               data.Currency +
-               (data.ErrorOccured ? "true" : "false") +
-               (data.HasParentTransaction ? "true" : "false") +
-               data.Id.ToString() +
-               data.IntegrationId.ToString() +
-               (data.Is3dSecure ? "true" : "false") +
-               (data.IsAuth ? "true" : "false") +
-               (data.IsCapture ? "true" : "false") +
-               (data.IsRefunded ? "true" : "false") +
-               (data.IsStandalonePayment ? "true" : "false") +
-               (data.IsVoided ? "true" : "false") +
-               data.Order.Id.ToString() +
-               data.Owner.ToString() +
-               (data.Pending ? "true" : "false") +
-               data.SourceData.Pan +
-               data.SourceData.SubType +
-               data.SourceData.Type +
-               (data.Success ? "true" : "false");
+                data.AmountCents.ToString() +
+                data.CreatedAt +
+                data.Currency +
+                (data.ErrorOccured ? "true" : "false") +
+                (data.HasParentTransaction ? "true" : "false") +
+                data.Id.ToString() +
+                data.IntegrationId.ToString() +
+                (data.Is3dSecure ? "true" : "false") +
+                (data.IsAuth ? "true" : "false") +
+                (data.IsCapture ? "true" : "false") +
+                (data.IsRefunded ? "true" : "false") +
+                (data.IsStandalonePayment ? "true" : "false") +
+                (data.IsVoided ? "true" : "false") +
+                data.Order.Id.ToString() +
+                data.Owner.ToString() +
+                (data.Pending ? "true" : "false") +
+                data.SourceData.Pan +
+                data.SourceData.SubType +
+                data.SourceData.Type +
+                (data.Success ? "true" : "false");
 
-            using (var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(_settings.HmacSecret.Trim())))
-            {
-                var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(concatenatedString));
-                var calculatedHmac = BitConverter.ToString(hash).Replace("-", "").ToLower();
+            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(_settings.HmacSecret.Trim()));
+            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(concatenatedString));
+            var calculatedHmac = BitConverter.ToString(hash).Replace("-", "").ToLower();
 
-                return calculatedHmac.Equals(dto.Hmac, StringComparison.OrdinalIgnoreCase);
-            }
+            return calculatedHmac.Equals(dto.Hmac, StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task<string> GetAuthToken()
@@ -223,7 +174,7 @@ namespace Project.Core.Services
             var response = await _httpClient.PostAsJsonAsync("https://accept.paymob.com/api/auth/tokens", request);
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<PaymobAuthResponse>();
-            return result.Token;
+            return result!.Token;
         }
 
         private async Task<long> RegisterOrder(string authToken, string amountCents)
@@ -239,7 +190,7 @@ namespace Project.Core.Services
             var response = await _httpClient.PostAsJsonAsync("https://accept.paymob.com/api/ecommerce/orders", request);
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<PaymobOrderResponse>();
-            return result.Id;
+            return result!.Id;
         }
 
         private async Task<string> GetPaymentKey(string authToken, string orderId, string amountCents)
@@ -252,8 +203,7 @@ namespace Project.Core.Services
                 OrderId = orderId,
                 BillingData = new PaymobBillingData
                 {
-                    // بيانات وهمية (يفضل تغييرها ببيانات حقيقية من جدول البيزنس لو متاحة)
-                    Country = "EG", // أهم حاجة دي تكون EG مش NA
+                    Country = "EG",
                     City = "Cairo",
                     FirstName = "Mohamed",
                     LastName = "Test",
@@ -267,7 +217,7 @@ namespace Project.Core.Services
             var response = await _httpClient.PostAsJsonAsync("https://accept.paymob.com/api/acceptance/payment_keys", request);
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<PaymobKeyResponse>();
-            return result.Token;
+            return result!.Token;
         }
     }
 }

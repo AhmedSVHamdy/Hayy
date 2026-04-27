@@ -9,20 +9,20 @@ namespace Project.Core.DTOs.Paymob
     public class PaymobAuthRequest
     {
         [JsonPropertyName("api_key")]
-        public string ApiKey { get; set; }
+        public string ApiKey { get; set; } = null!;
     }
 
     // 2. طلب تسجيل الأوردر
     public class PaymobOrderRequest
     {
         [JsonPropertyName("auth_token")]
-        public string AuthToken { get; set; }
+        public string AuthToken { get; set; } = null!;
 
         [JsonPropertyName("delivery_needed")]
         public string DeliveryNeeded { get; set; } = "false";
 
         [JsonPropertyName("amount_cents")]
-        public string AmountCents { get; set; } // السعر بالقروش (100 جنيه = 10000)
+        public string AmountCents { get; set; } = null!; // السعر بالقروش (100 جنيه = 10000)
 
         [JsonPropertyName("currency")]
         public string Currency { get; set; } = "EGP";
@@ -35,19 +35,19 @@ namespace Project.Core.DTOs.Paymob
     public class PaymobKeyRequest
     {
         [JsonPropertyName("auth_token")]
-        public string AuthToken { get; set; }
+        public string AuthToken { get; set; } = null!;
 
         [JsonPropertyName("amount_cents")]
-        public string AmountCents { get; set; }
+        public string AmountCents { get; set; } = null!;
 
         [JsonPropertyName("expiration")]
         public int Expiration { get; set; } = 3600; // المفتاح يموت بعد ساعة
 
         [JsonPropertyName("order_id")]
-        public string OrderId { get; set; }
+        public string OrderId { get; set; } = null!;
 
         [JsonPropertyName("billing_data")]
-        public PaymobBillingData BillingData { get; set; }
+        public PaymobBillingData BillingData { get; set; } = null!;
 
         [JsonPropertyName("currency")]
         public string Currency { get; set; } = "EGP";

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Project.Core.Domain.Entities; // تأكد من الـ Namespace بتاعك
+using Project.Core.Domain.Entities;
+using Project.Core.Enums;
 
 namespace Project.Infrastructure.Configuration
 {
@@ -8,46 +9,45 @@ namespace Project.Infrastructure.Configuration
     {
         public void Configure(EntityTypeBuilder<Payment> builder)
         {
-            // اسم الجدول
-           // builder.ToTable("Payments");
-
             // Primary Key
             builder.HasKey(x => x.Id);
 
-            // التعامل مع الفلوس (مهم جداً عشان ميعملش تقريب غلط)
+            // المبلغ (decimal دقيق بدون تقريب)
             builder.Property(x => x.Amount)
                    .IsRequired()
-                   .HasColumnType("decimal(18,2)"); // 18 رقم، منهم 2 عشري
+                   .HasColumnType("decimal(18,2)");
 
             // العملة
             builder.Property(x => x.Currency)
-                   .HasMaxLength(3) // EGP, USD
+                   .HasMaxLength(3)
                    .HasDefaultValue("EGP");
 
-            // حالة الدفع (Success, Pending, Failed)
-            // لو انت عاملها Enum استخدم HasConversion<string>()
+            // ✅ تحويل PaymentStatus Enum → String في الداتابيز
+            // عشان لو فتحت الداتابيز تلاقي "Pending" مش "0"
             builder.Property(x => x.Status)
+                   .HasConversion<string>()
                    .HasMaxLength(20)
                    .IsRequired();
 
-            // طريقة الدفع (Visa, Wallet)
+            // ✅ تحويل PaymentMethod Enum → String في الداتابيز
             builder.Property(x => x.PaymentMethod)
-                   .HasMaxLength(50);
+                   .HasConversion<string>()
+                   .HasMaxLength(50)
+                   .IsRequired();
 
-            // 🔴 أعمدة Paymob (مهمة جداً)
-            // عملناها Optional عشان وانت بتنشأ الريكويست لسه ميكونش جالك الرد
+            // حقول Paymob (Optional لأنها بتيجي بعد الرد)
             builder.Property(x => x.PaymobOrderId)
                    .IsRequired(false);
 
             builder.Property(x => x.PaymobTransactionId)
                    .IsRequired(false);
 
-            // العلاقات Relationships
-            // كل عملية دفع مربوطة باشتراك (اختياري، لأن ممكن دفع لسبب تاني غير الاشتراك)
+            // العلاقة مع Subscription
+            // OnDelete.Restrict عشان لو الاشتراك اتمسح سجل الدفع يفضل كأرشيف
             builder.HasOne(x => x.Subscription)
                    .WithMany(s => s.Payments)
                    .HasForeignKey(x => x.SubscriptionId)
-                   .OnDelete(DeleteBehavior.Restrict); // عشان لو مسحت الاشتراك سجل الدفع ميتمسحش (أرشيف)
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
