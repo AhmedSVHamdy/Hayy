@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Project.Infrastructure.ApplicationDbContext;
 
@@ -11,9 +12,11 @@ using Project.Infrastructure.ApplicationDbContext;
 namespace Project.Infrastructure.Migrations
 {
     [DbContext(typeof(HayyContext))]
-    partial class HayyContextModelSnapshot : ModelSnapshot
+    [Migration("20260427035806_AddPaymentWithPaymob")]
+    partial class AddPaymentWithPaymob
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -966,6 +969,43 @@ namespace Project.Infrastructure.Migrations
                     b.ToTable("PostLikes", (string)null);
                 });
 
+            modelBuilder.Entity("Project.Core.Domain.Entities.RecommendedItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Score")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ItemType", "ItemId");
+
+                    b.ToTable("RecommendedItems", (string)null);
+                });
+
             modelBuilder.Entity("Project.Core.Domain.Entities.Review", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1222,15 +1262,48 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "CategoryId")
-                        .IsUnique()
-                        .HasFilter("[CategoryId] IS NOT NULL");
-
-                    b.HasIndex("UserId", "TagId")
-                        .IsUnique()
-                        .HasFilter("[TagId] IS NOT NULL");
-
                     b.ToTable("UserInterestProfiles", (string)null);
+                });
+
+            modelBuilder.Entity("Project.Core.Domain.Entities.UserLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ActionType")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SearchQuery")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.PrimitiveCollection<string>("TagId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("TargetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserLog");
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.UserSettings", b =>
@@ -1609,6 +1682,17 @@ namespace Project.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Project.Core.Domain.Entities.RecommendedItem", b =>
+                {
+                    b.HasOne("Project.Core.Domain.Entities.User", "User")
+                        .WithMany("RecommendedItems")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Project.Core.Domain.Entities.Review", b =>
                 {
                     b.HasOne("Project.Core.Domain.Entities.Place", "Place")
@@ -1648,6 +1732,15 @@ namespace Project.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Project.Core.Domain.Entities.UserLog", b =>
+                {
+                    b.HasOne("Project.Core.Domain.Entities.User", null)
+                        .WithMany("UserLogs")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.UserSettings", b =>
@@ -1754,9 +1847,13 @@ namespace Project.Infrastructure.Migrations
 
                     b.Navigation("PostLikes");
 
+                    b.Navigation("RecommendedItems");
+
                     b.Navigation("Reviews");
 
                     b.Navigation("UserInterestProfiles");
+
+                    b.Navigation("UserLogs");
 
                     b.Navigation("UserSettings");
                 });

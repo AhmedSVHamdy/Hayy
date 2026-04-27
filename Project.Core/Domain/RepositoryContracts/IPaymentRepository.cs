@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Project.Core.Domain.Entities;
+﻿using Project.Core.Domain.Entities;
 
 namespace Project.Core.Domain.RepositoryContracts
 {
