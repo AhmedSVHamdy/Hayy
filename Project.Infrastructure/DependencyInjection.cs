@@ -147,7 +147,9 @@ namespace Project.Infrastructure
             services.AddScoped<IEventBookingRepository, EventBookingRepository>();
             services.AddScoped<IOfferRepository, OfferRepository>();
             services.AddHostedService<BookingExpirationWorker>();
-           // services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
+            services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+            
 
 
             // ====================================================
