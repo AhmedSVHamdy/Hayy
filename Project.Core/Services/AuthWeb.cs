@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
@@ -21,6 +22,7 @@ namespace Project.Core.Services
         private readonly IEmailService _emailService;
         private readonly IBusinessRepository _businessRepo;
         private readonly IJwtService _jwtService;
+        private readonly IMemoryCache _cache;
 
         public AuthWeb(UserManager<User> userManager,
             SignInManager<User> signInManager,
@@ -29,7 +31,8 @@ namespace Project.Core.Services
             IValidator<RegisterDTO> registerDtoValidator,
             IEmailService emailService,
             IBusinessRepository businessRepo,
-            IJwtService jwtService)
+            IJwtService jwtService,
+            IMemoryCache cache)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -39,6 +42,7 @@ namespace Project.Core.Services
             _emailService = emailService;
             _businessRepo = businessRepo;
             _jwtService = jwtService;
+            _cache = cache;
         }
 
         // =========================================================
@@ -160,22 +164,41 @@ namespace Project.Core.Services
             };
         }
 
+
         // =========================================================
-        //  5. CONFIRM EMAIL
+        //  5. CONFIRM EMAIL (OTP Version) - implements IAuthWeb
         // =========================================================
         public async Task<IdentityResult> ConfirmEmailAsync(string userId, string token)
         {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
+            // userId هنا بنستخدمه كـ Email للحفاظ على نفس الـ interface
+            var user = await _userManager.FindByEmailAsync(userId);
+            if (user == null)
+                return IdentityResult.Failed(new IdentityError { Description = "User not found" });
 
-            var result = await _userManager.ConfirmEmailAsync(user, token);
-            if (result.Succeeded)
-            {
-                user.IsVerified = true;
-                user.EmailConfirmed = true;
-                await _userManager.UpdateAsync(user);
-            }
-            return result;
+            var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(
+                user,
+                TokenOptions.DefaultEmailProvider,
+                token);
+
+            if (!isValidOtp)
+                return IdentityResult.Failed(new IdentityError { Description = "Invalid or expired OTP." });
+
+            user.IsVerified = true;
+            user.EmailConfirmed = true;
+            return await _userManager.UpdateAsync(user);
+        }
+
+        private async Task SendConfirmationEmailInternal(User user)
+        {
+            EnforceOtpRateLimit(user.Email!, "email-verification");
+
+            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+
+            var message = $@"<h3>Welcome to Hayy!</h3>
+                     <p>Your verification code is:</p>
+                     <h1>{otp}</h1>";
+
+            await _emailService.SendEmailAsync(user.Email!, "Account Verification OTP", message);
         }
 
         // =========================================================
@@ -235,21 +258,16 @@ namespace Project.Core.Services
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null) return null;
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var encodedToken = Uri.EscapeDataString(token);
-            var encodedEmail = Uri.EscapeDataString(email);
+            EnforceOtpRateLimit(email, "password-reset");
 
-            var resetLink = $"http://localhost:3000/reset-password?email={encodedEmail}&token={encodedToken}";
+            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
 
-            var message = $@"
-            <h3>Password Reset Request</h3>
-            <p>Click the link below to reset your password:</p>
-            <a href='{resetLink}'>Reset Password</a>
-            <br/>
-            <p>Or use this token: {token}</p>";
+            var message = $@"<h3>Password Reset</h3>
+                     <p>Your reset OTP is:</p>
+                     <h1>{otp}</h1>";
 
-            await _emailService.SendEmailAsync(email, "Reset Password", message);
-            return token;
+            await _emailService.SendEmailAsync(email, "Password Reset OTP", message);
+            return otp;
         }
 
         // =========================================================
@@ -258,9 +276,21 @@ namespace Project.Core.Services
         public async Task<IdentityResult> ResetPasswordAsync(ResetPasswordRequest request)
         {
             var user = await _userManager.FindByEmailAsync(request.Email);
-            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "Invalid request" });
+            if (user == null)
+                return IdentityResult.Failed(new IdentityError { Description = "Invalid request" });
 
-            var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+            // request.Token هنا OTP
+            var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(
+                user,
+                TokenOptions.DefaultEmailProvider,
+                request.Token);
+
+            if (!isValidOtp)
+                return IdentityResult.Failed(new IdentityError { Description = "Invalid or expired OTP." });
+
+            // لازم ResetPasswordAsync ياخد reset token داخلي
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
 
             if (result.Succeeded)
             {
@@ -268,6 +298,7 @@ namespace Project.Core.Services
                 user.RefreshTokenExpirationDateTime = DateTime.MinValue;
                 await _userManager.UpdateAsync(user);
             }
+
             return result;
         }
 
@@ -323,21 +354,6 @@ namespace Project.Core.Services
             await _userManager.AddToRoleAsync(user, roleName);
 
             return user;
-        }
-
-        private async Task SendConfirmationEmailInternal(User user)
-        {
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var encodedToken = Uri.EscapeDataString(token);
-            var encodedUserId = Uri.EscapeDataString(user.Id.ToString());
-
-            var confirmLink = $"https://localhost:7248/api/web/auth/confirm-email?userId={encodedUserId}&token={encodedToken}";
-
-            var message = $@"<h3>Welcome!</h3>
-                             <p>Please confirm your account:</p>
-                             <a href='{confirmLink}'>Confirm Account</a>";
-
-            await _emailService.SendEmailAsync(user.Email!, "Confirm Account", message);
         }
 
         // دالة مساعدة لتحديد حالة المستخدم (عشان نستخدمها في Login و RefreshToken)
@@ -407,6 +423,51 @@ namespace Project.Core.Services
             var result = await _userManager.UpdateAsync(user);
 
             return result.Succeeded;
+        }
+
+        // =========================================================
+        /// <summary>
+        /// Specifies the maximum number of one-time password (OTP) requests allowed per hour.
+        /// </summary>
+        /// <remarks>This constant is used to limit the frequency of OTP requests in order to prevent
+        /// abuse and enhance security. Exceeding this limit may result in requests being denied until the next
+        /// hour.</remarks>
+        private const int MaxOtpRequestsPerHour = 5;
+        private static readonly TimeSpan OtpWindow = TimeSpan.FromHours(1);
+
+        private sealed class OtpRateState
+        {
+            public int Count { get; set; }
+            public DateTime WindowStartUtc { get; set; }
+        }
+
+        private void EnforceOtpRateLimit(string email, string purpose)
+        {
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+            var cacheKey = $"otp-rate:{purpose}:{normalizedEmail}";
+            var now = DateTime.UtcNow;
+
+            var state = _cache.GetOrCreate(cacheKey, entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = OtpWindow;
+                return new OtpRateState
+                {
+                    Count = 0,
+                    WindowStartUtc = now
+                };
+            })!;
+
+            if (now - state.WindowStartUtc >= OtpWindow)
+            {
+                state.Count = 0;
+                state.WindowStartUtc = now;
+            }
+
+            if (state.Count >= MaxOtpRequestsPerHour)
+                throw new InvalidOperationException("OTP limit reached. Please try again after 1 hour.");
+
+            state.Count++;
+            _cache.Set(cacheKey, state, OtpWindow);
         }
     }
 }

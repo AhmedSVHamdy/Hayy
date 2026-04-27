@@ -8,5 +8,6 @@ namespace Project.Core.ServiceContracts
     public interface IPostLikeService
     {
         Task<LikeResponseDto> ToggleLikeAsync(ToggleLikeDto toggleLikeDto);
+        Task<IEnumerable<PostLikeUserDto>> GetLikesByPostIdAsync(Guid postId);
     }
 }

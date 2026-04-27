@@ -20,8 +20,10 @@ namespace Project.Core.Services
         private readonly INotifier _notifier;
         private readonly IUserLogService _userLogService; // Mongo
         private readonly IPlaceRepository _placeRepository;
+        private readonly IUserInterestRepository _interestRepository;
 
-        public PostLikeService(IPostLikeRepository postLikeRepository, IBusinessPostRepository businessPostRepository, IMapper mapper, INotifier notifier, IUserLogService userLogService, IPlaceRepository placeRepository)
+
+        public PostLikeService(IPostLikeRepository postLikeRepository, IBusinessPostRepository businessPostRepository, IMapper mapper, INotifier notifier, IUserLogService userLogService, IPlaceRepository placeRepository, IUserInterestRepository interestRepository)
         {
             _postLikeRepository = postLikeRepository;
             _businessPostRepository = businessPostRepository;
@@ -29,6 +31,7 @@ namespace Project.Core.Services
             _notifier = notifier;
             _userLogService = userLogService;
             _placeRepository = placeRepository;
+            _interestRepository = interestRepository;
         }
         public async Task<LikeResponseDto> ToggleLikeAsync(ToggleLikeDto dto)
         {
@@ -62,7 +65,16 @@ namespace Project.Core.Services
                 );
 
                 // 🧠 Mongo Log: تسجيل الحدث للذكاء الاصطناعي
-                // حماية: لو المكان مش جاي مع البوست، حط CategoryId بـ Empty عشان السيرفر ميقعش
+                var userInterests = await _interestRepository.GetUserInterestsByUserIdAsync(dto.UserId);
+
+                Guid? userTopCategoryId = userInterests
+                    .OrderByDescending(i => i.InterestScore)
+                    .FirstOrDefault(i => i.CategoryId.HasValue)?.CategoryId;
+
+                List<Guid> userTagIds = userInterests
+                    .Where(i => i.TagId.HasValue)
+                    .Select(i => i.TagId.Value)
+                    .ToList();
                 Guid categoryId = post.Place?.CategoryId ?? Guid.Empty;
                 var logDto = new CreateUserLogDto
                 {
@@ -71,7 +83,10 @@ namespace Project.Core.Services
                     TargetType = TargetType.Post,
                     TargetId = dto.PostId,
                     CategoryId = categoryId, // ممكن تجيبه من الـ Place لو عايز دقة أكتر
-                    TagId = post.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>()
+                    Details = $"اليوزر عمل لايك على بوست ",
+                    TagId = post.Place?.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>(),
+                    UserTopInterestCategoryId = userTopCategoryId,
+                    UserInterestTagIds = userTagIds
                 };
                 await _userLogService.LogActivityAsync(logDto);
             }
@@ -85,6 +100,27 @@ namespace Project.Core.Services
                 IsLiked = isLikedNow,
                 LikesCount = newCount
             };
+        }
+        // ضيف الدالة دي في كلاس PostLikeService
+        public async Task<IEnumerable<PostLikeUserDto>> GetLikesByPostIdAsync(Guid postId)
+        {
+            // 1. نتأكد إن البوست موجود الأول عشان نطلع رسالة واضحة لو مش موجود
+            var post = await _businessPostRepository.GetPostByIdAsync(postId);
+            if (post == null)
+                throw new KeyNotFoundException("البوست ده مش موجود! 🤷‍♂️");
+
+            // 2. نجيب اللايكات
+            var likes = await _postLikeRepository.GetLikesByPostIdAsync(postId);
+
+            // 3. Mapping (لو مش ضايفها في AutoMapper ممكن نعملها هنا يدوياً كده)
+            var mappedLikes = likes.Select(l => new PostLikeUserDto
+            {
+                UserId = l.UserId,
+                FullName = l.User?.FullName ?? "مستخدم غير معروف",
+                ProfileImage = l.User?.ProfileImage
+            });
+
+            return mappedLikes;
         }
     }
     

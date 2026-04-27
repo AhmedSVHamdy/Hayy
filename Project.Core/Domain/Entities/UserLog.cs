@@ -20,5 +20,7 @@ namespace Project.Core.Domain.Entities
         public string? Details { get; set; }
         public string? SearchQuery { get; set; }
         public DateTime CreatedAt { get; set; }
+        public Guid? UserTopInterestCategoryId { get; set; }
+        public List<Guid> UserInterestTagIds { get; set; } = new List<Guid>();
     }
 }

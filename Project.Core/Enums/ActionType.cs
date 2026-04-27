@@ -5,12 +5,10 @@
         View = 0,
         Like = 1,
         Comment = 2,
-        Share = 3,
-        Follow = 4,
-        Search = 5,
-        Book = 6,
-        Review = 7,
-        Post = 8,
-        Reply=9,
+        Follow = 3,
+        Search = 4,
+        Review = 5,
+        Post = 6,
+        Reply=7,
     }
 }

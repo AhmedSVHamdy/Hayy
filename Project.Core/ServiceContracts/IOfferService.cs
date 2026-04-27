@@ -12,5 +12,6 @@ namespace Project.Core.ServiceContracts
         Task<OfferResponseDto> UpdateOfferAsync(Guid id, UpdateOfferDto dto);
         Task<bool> DeleteOfferAsync(Guid id);
         Task ExpireFinishedOffersAsync();
+        Task<IEnumerable<OfferResponseDto>> GetActiveOffersAsync();
     }
 }

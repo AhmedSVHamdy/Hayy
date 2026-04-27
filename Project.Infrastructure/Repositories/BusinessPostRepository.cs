@@ -70,5 +70,22 @@ namespace Project.Infrastructure.Repositories
             _context.BusinessPosts.Remove(post);
             await _context.SaveChangesAsync(); // بنحفظ الحذف في الداتابيز
         }
+
+        public async Task<List<BusinessPost>> GetAllPostsPagedAsync(int pageNumber, int pageSize)
+        {
+            return await _context.BusinessPosts
+                .Include(p => p.Place)
+                .Include(p => p.PostLikes)
+                .Include(p => p.PostComments)
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetTotalCountAsync()
+        {
+            return await _context.BusinessPosts.CountAsync();
+        }
     }
 }

@@ -170,5 +170,26 @@ namespace WebApi.Controllers
                 return BadRequest(new { message = ex.Message }); // 400 لأي خطأ تاني
             }
         }
+
+        /// <summary>
+        /// Retrieves all business posts with pagination.
+        /// </summary>
+        /// <param name="pageNumber">The page number of results to retrieve. Must be greater than or equal to 1. Defaults to 1.</param>
+        /// <param name="pageSize">The number of posts to include in each page of results. Must be greater than 0. Defaults to 10.</param>
+        /// <returns>An <see cref="IActionResult"/> containing a paged result of all business posts.</returns>
+        [HttpGet("all")] // GET: api/BusinessPosts/all?pageNumber=1&pageSize=10
+        [Authorize]
+        public async Task<IActionResult> GetAllPosts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _postService.GetAllPostsPagedAsync(pageNumber, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

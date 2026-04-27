@@ -1,16 +1,19 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.IdGenerators;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.Domain.RopositoryContracts;
+using Project.Core.Enums;
 using Project.Core.ServiceContracts; // عشان INotifier
 using Project.Core.Services;
 using Project.Core.Settings;
@@ -18,7 +21,6 @@ using Project.Infrastructure.ApplicationDbContext;
 using Project.Infrastructure.Repositories;
 using Project.Infrastructure.SignalR;
 using System;
-using Hangfire;
 
 namespace Project.Infrastructure
 {
@@ -27,7 +29,7 @@ namespace Project.Infrastructure
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
             // ====================================================
-            // 1. إعدادات قواعد البيانات (SQL & Mongo)
+            // 1. إعدادات قواعد البيانات (SQL)
             // ====================================================
             services.AddDbContext<HayyContext>(options =>
             {
@@ -42,25 +44,32 @@ namespace Project.Infrastructure
             });
 
             // ====================================================
-            // 2. إعدادات Hangfire (العسكري اللي مش بينام)
+            // 2. إعدادات قواعد البيانات (Mongo)
             // ====================================================
-            services.AddHangfire(config => config
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                // بيستخدم نفس الـ ConnectionString بتاع المشروع
-                .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection")));
-
-            // تشغيل السيرفر الداخلي لـ Hangfire عشان يبدأ ينفذ المهام
-            services.AddHangfireServer();
-
-            // MongoDb Configuration
             try { BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String)); }
             catch (BsonSerializationException) { }
 
             if (!BsonClassMap.IsClassMapRegistered(typeof(UserLog)))
             {
                 BsonClassMap.RegisterClassMap<UserLog>(cm => { cm.AutoMap(); cm.MapIdMember(c => c.Id); });
+            }
+
+            // 👇 ب. مابينج RecommendedItem الجديد 👇
+            if (!BsonClassMap.IsClassMapRegistered(typeof(RecommendedItem)))
+            {
+                BsonClassMap.RegisterClassMap<RecommendedItem>(cm =>
+                {
+                    cm.AutoMap();
+
+                    // تظبيط الـ ID
+                    cm.MapIdProperty(x => x.Id).SetIdGenerator(CombGuidGenerator.Instance);
+
+                    // تحويل الـ Enum لـ String عشان يتقرأ صح في المنجو
+                    cm.MapProperty(x => x.ItemType).SetSerializer(new EnumSerializer<ItemType>(BsonType.String));
+
+                    // تظبيط الـ Decimal لأعلى دقة
+                    cm.MapProperty(x => x.Score).SetSerializer(new DecimalSerializer(BsonType.Decimal128));
+                });
             }
 
             services.AddSingleton<IMongoClient>(sp =>
@@ -77,7 +86,21 @@ namespace Project.Infrastructure
             });
 
             // ====================================================
-            // 2. إعدادات Identity
+            // 3. إعدادات Hangfire (العسكري اللي مش بينام)
+            // ====================================================
+            services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                // بيستخدم نفس الـ ConnectionString بتاع المشروع
+                .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection")));
+
+            // تشغيل السيرفر الداخلي لـ Hangfire عشان يبدأ ينفذ المهام
+            services.AddHangfireServer();
+
+
+            // ====================================================
+            // 4. إعدادات Identity
             // ====================================================
             services.AddIdentity<User, ApplicationRole>(options =>
             {
@@ -91,15 +114,16 @@ namespace Project.Infrastructure
             .AddEntityFrameworkStores<HayyContext>()
             .AddDefaultTokenProviders()
             .AddUserStore<UserStore<User, ApplicationRole, HayyContext, Guid>>()
-            .AddRoleStore<RoleStore<ApplicationRole, HayyContext, Guid>>();
+            .AddRoleStore<RoleStore<ApplicationRole, HayyContext, Guid>>()
+            .AddDefaultTokenProviders();
 
             // ====================================================
-            // 3. SignalR Configuration
+            // 5. SignalR Configuration
             // ====================================================
             services.AddSignalR();
 
             // ====================================================
-            // 4. Repositories (مكانهم هنا)
+            // 6. Repositories (مكانهم هنا)
             // ====================================================
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -123,13 +147,11 @@ namespace Project.Infrastructure
             services.AddScoped<IEventBookingRepository, EventBookingRepository>();
             services.AddScoped<IOfferRepository, OfferRepository>();
             services.AddHostedService<BookingExpirationWorker>();
-            services.AddScoped<IPaymentRepository, PaymentRepository>();
-            services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
-          
+           // services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
 
 
             // ====================================================
-            // 5. Infrastructure Services (الخدمات المرتبطة بالبنية التحتية فقط)
+            // 7. Infrastructure Services (الخدمات المرتبطة بالبنية التحتية فقط)
             // ====================================================
             services.Configure<PaymobSettings>(configuration.GetSection("Paymob"));
 

@@ -2,11 +2,14 @@
 using FluentValidation;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
+using Project.Core.Enums;
 using Project.Core.ServiceContracts;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 using static Project.Core.DTO.CreateEventDTO;
+using Hangfire; // 👈 1. ضيفنا النيم سبيس ده
 
 namespace Project.Core.Services
 {
@@ -15,21 +18,24 @@ namespace Project.Core.Services
         private readonly IEventRepository _eventRepository;
         private readonly IMapper _mapper;
         private readonly IValidator<EventCreateDto> _validator;
-        private readonly INotifier _notifier; // SignalR Hub Wrapper
+        private readonly INotifier _notifier;
         private readonly IPlaceRepository _placeRepository; 
+        private readonly IBackgroundJobClient _backgroundJobClient; // 👈 2. ضيفنا العسكري بتاع Hangfire
 
         public EventService(
             IEventRepository eventRepository,
             IMapper mapper,
             IValidator<EventCreateDto> validator,
             INotifier notifier,
-            IPlaceRepository placeRepository)
+            IPlaceRepository placeRepository,
+            IBackgroundJobClient backgroundJobClient) // 👈 3. حقناه هنا
         {
             _eventRepository = eventRepository;
             _mapper = mapper;
             _validator = validator;
             _notifier = notifier;
             _placeRepository = placeRepository;
+            _backgroundJobClient = backgroundJobClient; // 👈 4. وربطناه هنا
         }
 
         public async Task<EventResponseDto> CreateEventAsync(EventCreateDto createDto)
@@ -38,7 +44,6 @@ namespace Project.Core.Services
             var validationResult = await _validator.ValidateAsync(createDto);
             if (!validationResult.IsValid)
             {
-                // بنجمع الأخطاء ونرمي Exception أو نرجع أوبجيكت فيه الأخطاء (حسب ستايل مشروعك)
                 var errors = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage));
                 throw new ArgumentException($"بيانات غير صالحة: {errors}");
             }
@@ -50,17 +55,25 @@ namespace Project.Core.Services
             // 3. Save to DB
             await _eventRepository.AddAsync(newEvent);
 
-            // 4. SignalR Notification (إعلام المتابعين للمكان)
-            string groupName = $"Management_{newEvent.PlaceId}"; // أو جروب المتابعين Followers_PlaceId
-            await _notifier.SendNotificationToGroup(
-                groupName,
-                $"إيفنت جديد متاح الآن: {newEvent.Title}! 🎉 سارع بالحجز."
+            // 4. 🔥 Hangfire Background Job 🔥 (بدل القديم)
+            string title = "إيفنت جديد متاح الآن! 🎉";
+            string msg = $"لا تفوت فرصة الحضور في إيفنت: {newEvent.Title}. سارع بالحجز!";
+
+            _backgroundJobClient.Enqueue<INotificationService>(service => 
+                service.NotifyFollowersBackgroundJobAsync(
+                    newEvent.PlaceId, 
+                    title, 
+                    msg, 
+                    newEvent.Id.ToString(), 
+                    ReferenceType.Event.ToString(), // 👈 حددنا إنه إيفنت عشان الفرونت وتوجيه الصفحات
+                    NotificationType.EventAlert.ToString() // 👈 حددنا نوع الإشعار
+                )
             );
 
             // 5. Return Response
             return _mapper.Map<EventResponseDto>(newEvent);
         }
-
+        
         public async Task<EventResponseDto?> GetEventByIdAsync(Guid id)
         {
             var @event = await _eventRepository.GetByIdAsync(id);

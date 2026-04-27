@@ -1,4 +1,5 @@
-﻿using Project.Core.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Infrastructure.ApplicationDbContext;
 using System;
@@ -21,7 +22,12 @@ namespace Project.Infrastructure.Repositories
             await _context.UserInterestProfiles.AddRangeAsync(interests);
             
         }
-
+        public async Task<IEnumerable<UserInterestProfile>> GetUserInterestsByUserIdAsync(Guid userId)
+        {
+            return await _context.UserInterestProfiles
+                .Where(u => u.UserId == userId)
+                .ToListAsync();
+        }
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

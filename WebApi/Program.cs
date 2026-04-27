@@ -31,6 +31,7 @@ builder.Services.AddCoreServices(builder.Configuration);
 // ==========================================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddMemoryCache();
 
 // إعدادات Swagger
 builder.Services.AddSwaggerGen(options =>
@@ -197,6 +198,12 @@ app.UseAuthorization();
 app.MapHub<NotificationHub>("/notificationHub");
 // 👇 السطر ده بس عشان يشغل لك لوحة التحكم على المتصفح
 app.UseHangfireDashboard("/hangfire");
+// تشغيل الـ Job بتاعتنا عشان تشتغل كل يوم الساعة 12 بالليل
+RecurringJob.AddOrUpdate<IDatabaseMonitorService>(
+    "Monitor-Database-Size", // اسم الـ Job
+    service => service.CheckDatabaseSizeAsync(), // الميثود اللي هتتنفذ
+    Cron.Daily // التكرار (ممكن تخليها Cron.Hourly لو عايزها كل ساعة)
+); 
 app.MapControllers();
 
 app.Run();

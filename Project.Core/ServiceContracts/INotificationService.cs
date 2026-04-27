@@ -3,6 +3,7 @@ using Project.Core.DTO;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Project.Core.ServiceContracts
 {
@@ -22,5 +23,7 @@ namespace Project.Core.ServiceContracts
 
         // 5. العداد
         Task<int> GetUnreadCountAsync(Guid userId);
+
+        Task NotifyFollowersBackgroundJobAsync(Guid placeId, string title, string message, string referenceId, string referenceType,string type);
     }
 }

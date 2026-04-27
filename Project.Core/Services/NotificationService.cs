@@ -3,6 +3,7 @@ using Project.Core.Domain.Entities;
 using Project.Core.Domain.Entities.NotificationPayload;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
+using Project.Core.Enums;
 using Project.Core.Helpers; // تأكد من الـ Namespace ده
 using Project.Core.ServiceContracts;
 using System.Text.Json;
@@ -15,16 +16,20 @@ namespace Project.Core.Services
         private readonly IMapper _mapper;
         private readonly INotifier _notifier; // SignalR
         private readonly IUnitOfWork _unitOfWork; 
+        private readonly IPlaceFollowRepository _placeFollowRepo;
+
         public NotificationService(
             INotificationRepository repo,
             IMapper mapper,
             INotifier notifier,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IPlaceFollowRepository placeFollowRepo)
         {
             _repo = repo;
             _mapper = mapper;
             _notifier = notifier;
             _unitOfWork = unitOfWork;
+            _placeFollowRepo = placeFollowRepo;
         }
 
         // =========================================================
@@ -158,6 +163,33 @@ namespace Project.Core.Services
         {
             // بالاسم الجديد المتطابق ✅
             return await _repo.GetUnreadCountAsync(userId);
+        }
+
+        // =========================================================
+        // 6. Background Job لإرسال الإشعارات للمتابعين
+        // =========================================================
+        public async Task NotifyFollowersBackgroundJobAsync(Guid placeId, string title, string message, string referenceId, string referenceType, string type)
+        {
+            // بنجيب المتابعين للمكان ده. هنا بنجيبهم كلهم مش باجينيشن لأننا هنسجل بيهم كلهم.
+            // ممكن لو العدد ضخم جدا تعدل الريبو أنه يجيبها كـ IQueryable أو دفعات.
+            var followersResult = await _placeFollowRepo.GetFollowersByPlaceIdAsync(placeId, 1, 10000); 
+            var followers = followersResult.Items;
+
+            foreach (var follower in followers)
+            {
+                var request = new NotificationAddRequest
+                {
+                    UserId = follower.UserId,
+                    Title = title,
+                    Message = message,
+                    Type = NotificationType.OfferAlert.ToString(), // أو على حسب نوعه
+                    ReferenceId = referenceId,
+                    ReferenceType = referenceType
+                };
+
+                // استدعاء دالة الإنشاء العادية التي تقوم بالحفظ ثم الإرسال بـ SignalR
+                await CreateNotification(request);
+            }
         }
     }
 }

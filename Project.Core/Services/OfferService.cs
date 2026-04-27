@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using static Project.Core.DTO.CreateOfferDTO;
+using Hangfire;
 
 namespace Project.Core.Services
 {
@@ -18,19 +19,22 @@ namespace Project.Core.Services
         private readonly IMapper _mapper;
         private readonly IValidator<CreateOfferDto> _validator;
         private readonly INotifier _notifier; // SignalR
+        private readonly IBackgroundJobClient _backgroundJobClient; // 👈 هنضيف الباشا ده
 
         public OfferService(
             IOfferRepository offerRepository,
             IPlaceRepository placeRepository,
             IMapper mapper,
             IValidator<CreateOfferDto> validator,
-            INotifier notifier)
+            INotifier notifier,
+            IBackgroundJobClient backgroundJobClient) // 👈 هنا
         {
             _offerRepository = offerRepository;
             _placeRepository = placeRepository;
             _mapper = mapper;
             _validator = validator;
             _notifier = notifier;
+            _backgroundJobClient = backgroundJobClient; // 👈 وهنا
         }
 
         public async Task<OfferResponseDto> CreateOfferAsync(CreateOfferDto dto)
@@ -50,13 +54,29 @@ namespace Project.Core.Services
             await _offerRepository.AddAsync(offerEntity);
             await _offerRepository.SaveChangesAsync();
 
-            // 4. 🔥 SignalR Notification 🔥
-            // هنبعت إشعار لكل اللي عاملين Follow للمكان
-            string groupName = dto.PlaceId.ToString();
-            string message = $"🔥 عرض جديد من {place.Name}! خصم {dto.Discount}% على {dto.Title}";
-            await _notifier.SendNotificationToGroup(groupName, message);
+            // 4. 🔥 Hangfire Background Job 🔥
+            string title = $"عرض جديد من {place.Name}! 🎉";
+            string msg = $"استمتع بخصم {dto.Discount}% على {dto.Title}";
+
+            // نطلب من Hangfire يشغل الدالة دي في الخلفية فوراً ويرجع الخط يكمل الكود
+            _backgroundJobClient.Enqueue<INotificationService>(service => 
+                service.NotifyFollowersBackgroundJobAsync(
+                    dto.PlaceId, 
+                    title, 
+                    msg, 
+                    offerEntity.Id.ToString(), 
+                    ReferenceType.Offer.ToString(),
+                    NotificationType.OfferAlert.ToString() // 👈 حددنا نوع الإشعار
+                )
+            );
 
             return _mapper.Map<OfferResponseDto>(offerEntity);
+        }
+
+        public async Task<IEnumerable<OfferResponseDto>> GetActiveOffersAsync()
+        {
+            var activeOffers = await _offerRepository.GetActiveOffersAsync();
+            return _mapper.Map<IEnumerable<OfferResponseDto>>(activeOffers);
         }
 
         public async Task<IEnumerable<OfferResponseDto>> GetOffersByPlaceIdAsync(Guid placeId)
