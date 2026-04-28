@@ -19,14 +19,12 @@ namespace Project.Infrastructure.Repositories
         //  إدارة البيزنس
         // =========================================================
 
-        // 👇 غيرنا الاسم من AddAsync لـ AddBusinessAsync
         public async Task AddBusinessAsync(Business business)
         {
             await _context.Businesses.AddAsync(business);
             await _context.SaveChangesAsync();
         }
 
-        // 👇 غيرنا الاسم لـ GetBusinessByIdAsync
         public async Task<Business?> GetBusinessByIdAsync(Guid id)
         {
             return await _context.Businesses
@@ -35,16 +33,15 @@ namespace Project.Infrastructure.Repositories
                 .FirstOrDefaultAsync(b => b.Id == id);
         }
 
-        // 👇👇👇 هذا هو الحل الأساسي للمشكلة 👇👇👇
-        // غيرنا الاسم من GetByUserIdAsync لـ GetBusinessByUserIdAsync
         public async Task<Business?> GetBusinessByUserIdAsync(Guid userId)
         {
             return await _context.Businesses
                 .Include(b => b.Verifications)
+                // ✅ الإضافة: بنجيب الاشتراكات عشان نشيك عليها في الـ Login
+                .Include(b => b.Subscriptions)
                 .FirstOrDefaultAsync(b => b.UserId == userId);
         }
 
-        // 👇 غيرنا الاسم لـ UpdateBusinessAsync
         public async Task UpdateBusinessAsync(Business business)
         {
             _context.Businesses.Update(business);
