@@ -18,9 +18,9 @@ namespace Project.Core.Domain.Entities
         public ICollection<Place> Places { get; set; } = new List<Place>();
         public ICollection<BusinessPlan> BusinessPlans { get; set; } = new List<BusinessPlan>();
         public BusinessAnalytic? BusinessAnalytics { get; set; }
-
-        // 👇👇 التغيير هنا: خليناها List وغيرنا الاسم لـ Verifications عشان يبقى سهل 👇👇
         public virtual ICollection<BusinessVerification> Verifications { get; set; } = new List<BusinessVerification>();
-    }
 
+        // ✅ الجديد: ربط البيزنس بالاشتراكات
+        public ICollection<BusinessSubscription> Subscriptions { get; set; } = new List<BusinessSubscription>();
+    }
 }

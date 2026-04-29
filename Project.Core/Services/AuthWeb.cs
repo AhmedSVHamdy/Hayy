@@ -79,7 +79,7 @@ namespace Project.Core.Services
         }
 
         // =========================================================
-        //  3. LOGIN (Updated with Refresh Token Logic ✅)
+        //  3. LOGIN
         // =========================================================
         public async Task<AuthenticationResponse> LoginAsync(LoginDTO loginDTO)
         {
@@ -87,23 +87,19 @@ namespace Project.Core.Services
             if (user == null) throw new ArgumentException("Invalid Credentials");
 
             if (!user.IsVerified)
-            {
                 throw new ArgumentException("Email is not verified. Please check your inbox.");
-            }
 
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginDTO.Password!, false);
             if (!result.Succeeded) throw new ArgumentException("Invalid Credentials");
 
-            // 1. توليد التوكن
             var jwtResult = await _jwtService.CreateJwtTokenAsync(user, "web");
 
-            // 2. 🔥 حفظ الـ Refresh Token في قاعدة البيانات 🔥
             user.RefreshToken = jwtResult.RefreshToken;
             user.RefreshTokenExpirationDateTime = jwtResult.RefreshTokenExpirationDateTime;
             await _userManager.UpdateAsync(user);
 
-            // 3. تحديد الحالة
             string currentStatus = await GetUserVerificationStatus(user);
+            bool hasActiveSubscription = await HasActiveSubscriptionAsync(user);
 
             return new AuthenticationResponse
             {
@@ -115,41 +111,35 @@ namespace Project.Core.Services
                 RefreshTokenExpirationDateTime = jwtResult.RefreshTokenExpirationDateTime,
                 UserType = user.UserType,
                 VerificationStatus = currentStatus,
+                HasActiveSubscription = hasActiveSubscription,
                 Id = user.Id
             };
         }
 
         // =========================================================
-        //  🔥 4. REFRESH TOKEN (New Method) 🔥
+        //  4. REFRESH TOKEN
         // =========================================================
         public async Task<AuthenticationResponse> RefreshTokenAsync(TokenDTO tokenDTO)
         {
             if (tokenDTO == null) throw new ArgumentException("Invalid client request");
 
-            // 1. استخراج بيانات المستخدم من التوكن المنتهي
             var principal = await _jwtService.GetPrincipalFromJwtToken(tokenDTO.AccessToken);
             if (principal == null) throw new ArgumentException("Invalid access token");
 
-            // البحث عن الإيميل داخل الـ Claims
             var email = principal.FindFirst(ClaimTypes.Email)?.Value;
             var user = await _userManager.FindByEmailAsync(email!);
 
-            // 2. التحقق من صلاحية الـ Refresh Token
             if (user == null || user.RefreshToken != tokenDTO.RefreshToken || user.RefreshTokenExpirationDateTime <= DateTime.UtcNow)
-            {
                 throw new ArgumentException("Invalid refresh token");
-            }
 
-            // 3. توليد توكن جديد
             var newJwtResult = await _jwtService.CreateJwtTokenAsync(user, "web");
 
-            // 4. تحديث الداتابيز بالتوكن الجديد (Rotation)
             user.RefreshToken = newJwtResult.RefreshToken;
             user.RefreshTokenExpirationDateTime = newJwtResult.RefreshTokenExpirationDateTime;
             await _userManager.UpdateAsync(user);
 
-            // 5. إرجاع النتيجة
             string currentStatus = await GetUserVerificationStatus(user);
+            bool hasActiveSubscription = await HasActiveSubscriptionAsync(user);
 
             return new AuthenticationResponse
             {
@@ -160,17 +150,16 @@ namespace Project.Core.Services
                 RefreshToken = newJwtResult.RefreshToken,
                 RefreshTokenExpirationDateTime = newJwtResult.RefreshTokenExpirationDateTime,
                 UserType = user.UserType,
-                VerificationStatus = currentStatus
+                VerificationStatus = currentStatus,
+                HasActiveSubscription = hasActiveSubscription
             };
         }
 
-
         // =========================================================
-        //  5. CONFIRM EMAIL (OTP Version) - implements IAuthWeb
+        //  5. CONFIRM EMAIL
         // =========================================================
         public async Task<IdentityResult> ConfirmEmailAsync(string userId, string token)
         {
-            // userId هنا بنستخدمه كـ Email للحفاظ على نفس الـ interface
             var user = await _userManager.FindByEmailAsync(userId);
             if (user == null)
                 return IdentityResult.Failed(new IdentityError { Description = "User not found" });
@@ -188,140 +177,40 @@ namespace Project.Core.Services
             return await _userManager.UpdateAsync(user);
         }
 
-        private async Task SendConfirmationEmailInternal(User user)
-        {
-            EnforceOtpRateLimit(user.Email!, "email-verification");
-
-            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
-
-            var message = $@"<h3>Welcome to Hayy!</h3>
-                     <p>Your verification code is:</p>
-                     <h1>{otp}</h1>";
-
-            await _emailService.SendEmailAsync(user.Email!, "Account Verification OTP", message);
-        }
-
-        // =========================================================
-        //  6. RESEND CONFIRMATION
-        // =========================================================
-        public async Task ResendConfirmationEmailAsync(string email)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null) throw new ArgumentException("User not found");
-            if (user.IsVerified) throw new ArgumentException("Email is already verified.");
-
-            await SendConfirmationEmailInternal(user);
-        }
-
-        // =========================================================
-        //  7. LOGOUT
-        // =========================================================
-        public async Task<bool> LogoutAsync(string userId)
-        {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return false;
-
-            // مسح الـ Refresh Token عند الخروج
-            user.RefreshToken = null;
-            user.RefreshTokenExpirationDateTime = DateTime.MinValue;
-
-            var result = await _userManager.UpdateAsync(user);
-            return result.Succeeded;
-        }
-
-        // =========================================================
-        //  8. CHANGE PASSWORD
-        // =========================================================
-        public async Task<IdentityResult> ChangePasswordAsync(string userId, ChangePasswordRequest request)
-        {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
-
-            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
-
-            if (result.Succeeded)
-            {
-                // تصفير التوكن لضمان الخروج من الأجهزة الأخرى
-                user.RefreshToken = null;
-                user.RefreshTokenExpirationDateTime = DateTime.MinValue;
-                await _userManager.UpdateAsync(user);
-            }
-
-            return result;
-        }
-
-        // =========================================================
-        //  9. FORGOT PASSWORD
-        // =========================================================
-        public async Task<string?> GeneratePasswordResetTokenAsync(string email)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null) return null;
-
-            EnforceOtpRateLimit(email, "password-reset");
-
-            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
-
-            var message = $@"<h3>Password Reset</h3>
-                     <p>Your reset OTP is:</p>
-                     <h1>{otp}</h1>";
-
-            await _emailService.SendEmailAsync(email, "Password Reset OTP", message);
-            return otp;
-        }
-
-        // =========================================================
-        //  10. RESET PASSWORD
-        // =========================================================
-        public async Task<IdentityResult> ResetPasswordAsync(ResetPasswordRequest request)
-        {
-            var user = await _userManager.FindByEmailAsync(request.Email);
-            if (user == null)
-                return IdentityResult.Failed(new IdentityError { Description = "Invalid request" });
-
-            // request.Token هنا OTP
-            var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(
-                user,
-                TokenOptions.DefaultEmailProvider,
-                request.Token);
-
-            if (!isValidOtp)
-                return IdentityResult.Failed(new IdentityError { Description = "Invalid or expired OTP." });
-
-            // لازم ResetPasswordAsync ياخد reset token داخلي
-            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var result = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
-
-            if (result.Succeeded)
-            {
-                user.RefreshToken = null;
-                user.RefreshTokenExpirationDateTime = DateTime.MinValue;
-                await _userManager.UpdateAsync(user);
-            }
-
-            return result;
-        }
-
-        // =========================================================
-        //  11. MAKE ADMIN
-        // =========================================================
-        public async Task<bool> MakeAdmin(string email)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null) throw new ArgumentException("User not found with this email.");
-
-            if (await _userManager.IsInRoleAsync(user, "Admin"))
-            {
-                throw new ArgumentException("User is already an Admin.");
-            }
-
-            var result = await _userManager.AddToRoleAsync(user, "Admin");
-            return result.Succeeded;
-        }
-
         // =========================================================
         //  HELPERS
         // =========================================================
+
+        private async Task<string> GetUserVerificationStatus(User user)
+        {
+            if (user.UserType == UserType.Business.ToString())
+            {
+                var business = await _businessRepo.GetBusinessByUserIdAsync(user.Id);
+                if (business != null)
+                    return business.VerificationStatus.ToString();
+                return "New";
+            }
+            else if (user.UserType == UserType.Admin.ToString())
+            {
+                return VerificationStatus.Verified.ToString();
+            }
+            return "New";
+        }
+
+        // ✅ الجديد: بتشيك لو البيزنس عنده اشتراك نشط
+        private async Task<bool> HasActiveSubscriptionAsync(User user)
+        {
+            // الـ Admin مش محتاج اشتراك
+            if (user.UserType != UserType.Business.ToString())
+                return true;
+
+            var business = await _businessRepo.GetBusinessByUserIdAsync(user.Id);
+            if (business == null) return false;
+
+            return business.Subscriptions
+                .Any(s => s.IsActive && s.EndDate > DateTime.UtcNow);
+        }
+
         private async Task<User> RegisterUserInternal(RegisterDTO dto, IFormFile? image, UserType userType, bool isVerified)
         {
             var valResult = await _registerDtoValidator.ValidateAsync(dto);
@@ -348,90 +237,116 @@ namespace Project.Core.Services
 
             string roleName = userType.ToString();
             if (!await _roleManager.RoleExistsAsync(roleName))
-            {
                 await _roleManager.CreateAsync(new ApplicationRole { Name = roleName, NormalizedName = roleName.ToUpper() });
-            }
+
             await _userManager.AddToRoleAsync(user, roleName);
 
             return user;
         }
 
-        // دالة مساعدة لتحديد حالة المستخدم (عشان نستخدمها في Login و RefreshToken)
-        private async Task<string> GetUserVerificationStatus(User user)
+        private async Task SendConfirmationEmailInternal(User user)
         {
-            if (user.UserType == UserType.Business.ToString())
+            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+            await _emailService.SendEmailAsync(user.Email!, "Verify Your Email", $"Your OTP is: {otp}");
+        }
+
+        public async Task ResendConfirmationEmailAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) throw new ArgumentException("User not found.");
+            if (user.IsVerified) throw new ArgumentException("Email already verified.");
+            await SendConfirmationEmailInternal(user);
+        }
+
+        public async Task<bool> LogoutAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return false;
+            user.RefreshToken = null;
+            user.RefreshTokenExpirationDateTime = DateTime.MinValue;
+            var result = await _userManager.UpdateAsync(user);
+            return result.Succeeded;
+        }
+
+        public async Task<IdentityResult> ChangePasswordAsync(string userId, ChangePasswordRequest request)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+            return await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        }
+
+        public async Task<string?> GeneratePasswordResetTokenAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) return null;
+            EnforceOtpRateLimit(email, "password-reset");
+            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+            await _emailService.SendEmailAsync(email, "Reset Your Password", $"Your OTP is: {otp}");
+            return otp;
+        }
+
+        public async Task<IdentityResult> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+
+            var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider, request.Token);
+            if (!isValidOtp) return IdentityResult.Failed(new IdentityError { Description = "Invalid or expired OTP." });
+
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
+
+            if (result.Succeeded)
             {
-                var business = await _businessRepo.GetBusinessByUserIdAsync(user.Id);
-                if (business != null)
-                {
-                    return business.VerificationStatus.ToString();
-                }
-                return "New";
+                user.RefreshToken = null;
+                user.RefreshTokenExpirationDateTime = DateTime.MinValue;
+                await _userManager.UpdateAsync(user);
             }
-            else if (user.UserType == UserType.Admin.ToString())
-            {
-                return VerificationStatus.Verified.ToString();
-            }
-            return "New";
+
+            return result;
+        }
+
+        public async Task<bool> MakeAdmin(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) throw new ArgumentException("User not found with this email.");
+            if (await _userManager.IsInRoleAsync(user, "Admin")) throw new ArgumentException("User is already an Admin.");
+            var result = await _userManager.AddToRoleAsync(user, "Admin");
+            return result.Succeeded;
         }
 
         public async Task<UserProfileDTO> GetUserProfileAsync(string userId)
         {
-            // 1. هات اليوزر من الداتابيز
             var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) throw new ArgumentException("User not found");
 
-            if (user == null)
-            {
-                throw new ArgumentException("User not found");
-            }
-
-            // 2. حول البيانات لـ DTO (Mapping)
-            // لاحظ: لو عندك خصائص تانية في الـ ApplicationUser ضيفها هنا
             return new UserProfileDTO
             {
                 Id = user.Id.ToString(),
-               FullName= user.FullName!,
+                FullName = user.FullName!,
                 Email = user.Email,
-                ImageUrl = user.ProfileImage, // لو بتخزن مسار الصورة
-                UserType = user.UserType!.ToString(), // لو بتستخدم Enum
+                ImageUrl = user.ProfileImage,
+                UserType = user.UserType!.ToString(),
                 IsEmailConfirmed = user.EmailConfirmed
             };
         }
 
         public async Task<bool> CheckEmailExistsAsync(string email)
         {
-            // بنبحث عن اليوزر بالإيميل
             var user = await _userManager.FindByEmailAsync(email);
-
-            // لو النتيجة مش null يبقى الإيميل موجود، لو null يبقى متاح
             return user != null;
         }
 
         public async Task<bool> RevokeTokenAsync(string token)
         {
-            // 1. بندور على اليوزر اللي معاه الـ Refresh Token ده
-            // ملحوظة: لازم يكون عندك access للـ UserManager أو الـ DBContext مباشرة
             var user = _userManager.Users.SingleOrDefault(u => u.RefreshToken == token);
-
             if (user == null) return false;
-
-            // 2. بنلغي التوكن (يا إما بخليه null أو بخليه منتهي الصلاحية)
             user.RefreshToken = null;
-            user.RefreshTokenExpirationDateTime = DateTime.UtcNow.AddDays(-1); // تاريخ قديم عشان يموت فوراً
-
-            // 3. نحفظ التغييرات
+            user.RefreshTokenExpirationDateTime = DateTime.UtcNow.AddDays(-1);
             var result = await _userManager.UpdateAsync(user);
-
             return result.Succeeded;
         }
 
-        // =========================================================
-        /// <summary>
-        /// Specifies the maximum number of one-time password (OTP) requests allowed per hour.
-        /// </summary>
-        /// <remarks>This constant is used to limit the frequency of OTP requests in order to prevent
-        /// abuse and enhance security. Exceeding this limit may result in requests being denied until the next
-        /// hour.</remarks>
         private const int MaxOtpRequestsPerHour = 5;
         private static readonly TimeSpan OtpWindow = TimeSpan.FromHours(1);
 
@@ -450,11 +365,7 @@ namespace Project.Core.Services
             var state = _cache.GetOrCreate(cacheKey, entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = OtpWindow;
-                return new OtpRateState
-                {
-                    Count = 0,
-                    WindowStartUtc = now
-                };
+                return new OtpRateState { Count = 0, WindowStartUtc = now };
             })!;
 
             if (now - state.WindowStartUtc >= OtpWindow)

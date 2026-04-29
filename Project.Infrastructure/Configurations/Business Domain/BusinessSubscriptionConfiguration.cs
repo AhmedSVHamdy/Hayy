@@ -12,32 +12,28 @@ namespace Project.Infrastructure.Configuration
 
             builder.HasKey(x => x.Id);
 
-            // التواريخ (أساس السيستم)
             builder.Property(x => x.StartDate)
                    .IsRequired();
 
             builder.Property(x => x.EndDate)
                    .IsRequired();
 
-            // هل الاشتراك مفعل؟
             builder.Property(x => x.IsActive)
                    .HasDefaultValue(true);
 
             builder.Property(x => x.AutoRenew)
                    .HasDefaultValue(false);
 
-            // العلاقات
-            // 1. الاشتراك يخص بيزنس واحد
+            // ✅ التعديل: ربطنا WithMany بالـ navigation property عشان EF ميعملش BusinessId1
             builder.HasOne(x => x.Business)
-                   .WithMany() // أو WithMany(b => b.Subscriptions) لو ضفتها هناك
+                   .WithMany(b => b.Subscriptions)
                    .HasForeignKey(x => x.BusinessId)
                    .OnDelete(DeleteBehavior.Cascade);
 
-            // 2. الاشتراك يتبع خطة سعرية واحدة
             builder.HasOne(x => x.Plan)
                    .WithMany()
                    .HasForeignKey(x => x.PlanId)
-                   .OnDelete(DeleteBehavior.Restrict); // ممنوع تمسح باقة وفي ناس مشتركين فيها
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
