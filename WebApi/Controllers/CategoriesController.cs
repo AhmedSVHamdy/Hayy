@@ -43,6 +43,11 @@ namespace WebApi.Controllers
             if (result == null) return NotFound();
             return Ok(result);
         }
+        /// <summary>
+        /// Retrieves all categories.
+        /// </summary>
+        /// <returns>An <see cref="IActionResult"/> that contains the collection of categories if found; otherwise, a NotFound
+        /// result if no categories exist.</returns>
         [HttpGet("Get All")]
         public async Task<IActionResult> GetAll()
         {
@@ -72,6 +77,14 @@ namespace WebApi.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        /// <summary>
+        /// Retrieves all categories along with their associated tags.
+        /// </summary>
+        /// <remarks>Use this endpoint to obtain a list of all available categories, including the tags
+        /// assigned to each category. This can be useful for displaying category-tag relationships in client
+        /// applications.</remarks>
+        /// <returns>An <see cref="IActionResult"/> containing a collection of categories, each with its related tags. The result
+        /// is returned with an HTTP 200 status code.</returns>
         [HttpGet("with-tags-Filters")]
         public async Task<IActionResult> GetAllCategoriesWithTags()
         {

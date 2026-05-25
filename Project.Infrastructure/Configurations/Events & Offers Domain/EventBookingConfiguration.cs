@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Project.Core.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Project.Infrastructure.Configuration
 {
@@ -45,17 +42,21 @@ namespace Project.Infrastructure.Configuration
                    .HasMaxLength(100)
                    .IsRequired();
 
-            // Relationships Configuration
-            
-            builder.HasOne(X => X.User)
-                   .WithMany(u => u.EventBookings) // ✅ التعديل هنا: ضفنا اسم الليستة اللي في اليوزر
-                   .HasForeignKey(X => X.UserId)
-                   .OnDelete(DeleteBehavior.Restrict); 
+            // ==========================================
+            // Relationships Configuration (العلاقات الصح بس)
+            // ==========================================
 
-            builder.HasOne(X => X.Event)
-                   .WithMany(X => X.EventBookings)
-                   .HasForeignKey(X => X.EventId)
-                   .OnDelete(DeleteBehavior.Restrict);
+            // 1. علاقة الحجز باليوزر
+            builder.HasOne(eb => eb.User)
+                   .WithMany(u => u.EventBookings)
+                   .HasForeignKey(eb => eb.UserId)
+                   .OnDelete(DeleteBehavior.NoAction);
+
+            // 2. علاقة الحجز بالإيفينت
+            builder.HasOne(eb => eb.Event)
+                   .WithMany(e => e.EventBookings)
+                   .HasForeignKey(eb => eb.EventId)
+                   .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

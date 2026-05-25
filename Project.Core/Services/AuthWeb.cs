@@ -1,7 +1,9 @@
 ﻿using FluentValidation;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Project.Core.Domain;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
@@ -23,6 +25,8 @@ namespace Project.Core.Services
         private readonly IBusinessRepository _businessRepo;
         private readonly IJwtService _jwtService;
         private readonly IMemoryCache _cache;
+        private readonly IConfiguration _configuration;
+
 
         public AuthWeb(UserManager<User> userManager,
             SignInManager<User> signInManager,
@@ -32,7 +36,8 @@ namespace Project.Core.Services
             IEmailService emailService,
             IBusinessRepository businessRepo,
             IJwtService jwtService,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -43,6 +48,7 @@ namespace Project.Core.Services
             _businessRepo = businessRepo;
             _jwtService = jwtService;
             _cache = cache;
+            _configuration = configuration;
         }
 
         // =========================================================
@@ -345,6 +351,81 @@ namespace Project.Core.Services
             user.RefreshTokenExpirationDateTime = DateTime.UtcNow.AddDays(-1);
             var result = await _userManager.UpdateAsync(user);
             return result.Succeeded;
+        }
+
+        public async Task<AuthenticationResponse> GoogleLoginAsync(SocialLoginDTO request, string role = "Business")
+        {
+            GoogleJsonWebSignature.Payload payload;
+
+            try
+            {
+                var audiences = new List<string>();
+
+                if (!string.IsNullOrEmpty(_configuration["Google:ClientId"]))
+                    audiences.Add(_configuration["Google:ClientId"]!);
+
+                if (!string.IsNullOrEmpty(_configuration["Google:WebClientId"]))
+                    audiences.Add(_configuration["Google:WebClientId"]!);
+
+                var settings = new GoogleJsonWebSignature.ValidationSettings()
+                {
+                    Audience = audiences
+                };
+
+                payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException("Invalid Google Token: " + ex.Message);
+            }
+
+            var user = await _userManager.FindByEmailAsync(payload.Email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = payload.Email,
+                    Email = payload.Email,
+                    EmailConfirmed = true,
+                    FullName = payload.Name,
+                    ProfileImage = payload.Picture,
+                    UserType = role,
+                    IsVerified = role != UserType.Business.ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                    Reviews = new List<Review>()
+                };
+
+                var randomPassword = "Google_" + Guid.NewGuid().ToString("N") + "_P@ssw0rd";
+                var result = await _userManager.CreateAsync(user, randomPassword);
+
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    throw new Exception($"Failed to create Google user: {errors}");
+                }
+
+                await _userManager.AddToRoleAsync(user, role);
+            }
+            else
+            {
+                // ✅ تأكد إن اليوزر ده Business مش Customer
+                if (user.UserType != UserType.Business.ToString() &&
+                    user.UserType != UserType.Admin.ToString())
+                    throw new ArgumentException("Access denied. Only Business users can login here.");
+
+                if (user.ProfileImage != payload.Picture)
+                {
+                    user.ProfileImage = payload.Picture;
+                    await _userManager.UpdateAsync(user);
+                }
+            }
+
+            var authResponse = await _jwtService.CreateJwtTokenAsync(user, "Web");
+            authResponse.UserType = user.UserType;
+            authResponse.VerificationStatus = await GetUserVerificationStatus(user);
+
+            return authResponse;
         }
 
         private const int MaxOtpRequestsPerHour = 5;

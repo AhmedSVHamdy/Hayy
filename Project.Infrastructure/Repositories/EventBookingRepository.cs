@@ -40,7 +40,6 @@ namespace Project.Infrastructure.Repositories
         public async Task AddAsync(EventBooking booking)
         {
             await _context.EventBookings.AddAsync(booking);
-            await _context.SaveChangesAsync();
         }
 
         public async Task UpdateAsync(EventBooking booking)
@@ -69,8 +68,11 @@ namespace Project.Infrastructure.Repositories
         public async Task<EventBooking?> GetBookingByUserAndEventAsync(Guid userId, Guid eventId)
         {
             return await _context.EventBookings
-                .Include(b => b.Event) // عشان لو الـ DTO محتاج بيانات الإيفنت (اسمه، صورته)
-                .FirstOrDefaultAsync(b => b.UserId == userId && b.EventId == eventId);
+                .Include(b => b.Event)
+                .Where(b => b.UserId == userId && b.EventId == eventId)
+                .OrderByDescending(b => b.Status == BookingStatus.Pending)
+                .ThenByDescending(b => b.PaymentDeadline)
+                .FirstOrDefaultAsync();
         }
         public async Task<IEnumerable<EventBooking>> GetWaitlistedBookingsWithUsersAsync(Guid eventId)
         {
@@ -110,5 +112,6 @@ namespace Project.Infrastructure.Repositories
                             b.Status == BookingStatus.Completed))
                 .SumAsync(b => b.TicketQuantity);
         }
+        
     }
 }

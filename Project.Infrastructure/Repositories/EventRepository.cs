@@ -57,6 +57,14 @@ namespace Project.Infrastructure.Repositories
             _context.Events.Remove(eventItem);
             await _context.SaveChangesAsync();
         }
+        public async Task<Event?> GetEventWithLockAsync(Guid eventId)
+        {
+            return await _context.Events
+                .FromSqlRaw(
+                    "SELECT * FROM Events WITH (UPDLOCK, ROWLOCK) WHERE Id = {0}",
+                    eventId)
+                .FirstOrDefaultAsync();
+        }
     }
 
 }

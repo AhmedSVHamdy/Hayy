@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Project.Core; // 👈 1. ضيفنا دي عشان يشوف AddCoreServices
 using Project.Core.ServiceContracts;
+using Project.Core.Settings;
 using Project.Infrastructure; // ضروري عشان يشوف دالة AddInfrastructureServices
 using Project.Infrastructure.ApplicationDbContext; // عشان الـ Seeder
 using Project.Infrastructure.SignalR; // عشان NotificationHub
@@ -70,8 +71,6 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 
- 
-
 
 // إعدادات CORS
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
@@ -80,7 +79,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowClient", policyBuilder =>
     {
         policyBuilder
-            .WithOrigins(allowedOrigins ?? new[] { "http://localhost:8080" })
+            .WithOrigins(allowedOrigins ?? new[] { "http://localhost:8080",
+            "https://hayy-business-lv.vercel.app/"})
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();

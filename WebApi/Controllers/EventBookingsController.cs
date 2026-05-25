@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Project.Core.Domain.Entities;
+using Project.Core.Domain.RepositoryContracts;
+using Project.Core.Enums;
 using Project.Core.ServiceContracts;
 using System.Security.Claims;
 using static Project.Core.DTO.CreateEventBooking;
@@ -13,10 +15,12 @@ namespace WebApi.Controllers
     public class EventBookingsController : ControllerBase
     {
         private readonly IEventBookingService _bookingService;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public EventBookingsController(IEventBookingService bookingService)
+        public EventBookingsController(IEventBookingService bookingService, IUnitOfWork unitOfWork)
         {
             _bookingService = bookingService;
+            _unitOfWork = unitOfWork;
         }
         /// <summary>
         /// Creates a new booking for the authenticated user based on the provided booking details.
@@ -128,6 +132,40 @@ namespace WebApi.Controllers
                 return Ok(result); // يرجع شاشة خضراء للمنظم
             else
                 return BadRequest(result); // يرجع شاشة حمراء للمنظم وفيها رسالة التحذير
+        }
+
+        /// <summary>
+        /// Retrieves the QR code associated with the specified booking for the currently authenticated user.
+        /// </summary>
+        /// <remarks>The user must be authenticated and authorized to access the booking. The booking must
+        /// be confirmed and contain a QR code. Returns HTTP 401 if the user is not authorized, 404 if the booking or QR
+        /// code does not exist, and 400 if the booking is not confirmed.</remarks>
+        /// <param name="bookingId">The unique identifier of the booking for which to retrieve the QR code.</param>
+        /// <returns>An HTTP 200 response containing the QR code in Base64 format if the booking exists, belongs to the user, is
+        /// confirmed, and has a QR code; otherwise, an appropriate error response.</returns>
+        [HttpGet("my-qr/{bookingId}")]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> GetMyQrCode(Guid bookingId)
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdString, out Guid userId))
+                return Unauthorized();
+
+            var booking = await _unitOfWork.EventBookings.GetByIdAsync(bookingId);
+
+            if (booking == null)
+                return NotFound("الحجز غير موجود");
+
+            if (booking.UserId != userId)
+                return Unauthorized("غير مصرح لك");
+
+            if (booking.Status != BookingStatus.Confirmed)
+                return BadRequest("لم يتم تأكيد الدفع بعد");
+
+            if (string.IsNullOrEmpty(booking.QrCodeBase64))
+                return NotFound("الـ QR Code غير موجود");
+
+            return Ok(new { qrCode = booking.QrCodeBase64 });
         }
     }
 }

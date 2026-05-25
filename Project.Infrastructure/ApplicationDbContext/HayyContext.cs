@@ -58,6 +58,7 @@ public partial class HayyContext : IdentityDbContext<User, ApplicationRole, Guid
     public DbSet<PostComment> PostComments { get; set; } = null!;
     public DbSet<PostLike> PostLikes { get; set; } = null!;
     public DbSet<EventBooking> EventBookings { get; set; } = null!;
+    public DbSet<EventPayment> EventPayments { get; set; } = null!;
     public DbSet<PlaceFollow> PlaceFollows { get; set; } = null!;
     public DbSet<ReviewReply> ReviewReplies { get; set; } = null!;
 

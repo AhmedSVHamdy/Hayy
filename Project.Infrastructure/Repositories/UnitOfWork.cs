@@ -1,4 +1,5 @@
-﻿using Project.Core.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore.Storage;
+using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Infrastructure.ApplicationDbContext;
 
@@ -17,10 +18,12 @@ namespace Project.Infrastructure.Repositories
         public IBusinessSubscriptionRepository BusinessSubscriptions { get; private set; }
         public IGenericRepository<SubscriptionPlan> SubscriptionPlan { get; private set; }
         public IEventBookingRepository EventBookings { get; private set; }
+        public IEventRepository Events { get; private set; }
+        public IEventPaymentRepository EventPayments { get; private set; }
 
-       // ISubscriptionPlanRepository IUnitOfWork.SubscriptionPlans => throw new NotImplementedException();
+        // ISubscriptionPlanRepository IUnitOfWork.SubscriptionPlans => throw new NotImplementedException();
 
-       // public IGenericRepository<SubscriptionPlan> SubscriptionPlans { get; private set; }
+        // public IGenericRepository<SubscriptionPlan> SubscriptionPlans { get; private set; }
 
         public UnitOfWork(HayyContext context)
         {
@@ -34,6 +37,9 @@ namespace Project.Infrastructure.Repositories
             // تهيئة الـ Generic Repository للباقات
             SubscriptionPlan = new GenericRepository<SubscriptionPlan>(_context);
             SubscriptionPlans = new SubscriptionPlanRepository(context);
+
+            Events = new EventRepository(_context);
+            EventPayments = new EventPaymentRepository(_context);
         }
 
         // دالة الحفظ اللي أنت اخترتها
@@ -66,7 +72,15 @@ namespace Project.Infrastructure.Repositories
 
             return (IGenericRepository<TEntity>)_repositories[type];
         }
-      
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
+        }
+        public IExecutionStrategy CreateExecutionStrategy()
+        {
+            return _context.Database.CreateExecutionStrategy();
+        }
+
 
         public void Dispose()
         {

@@ -34,5 +34,6 @@ namespace Project.Core.ServiceContracts
         Task<bool> CheckEmailExistsAsync(string email);
 
         Task<bool> RevokeTokenAsync(string token);
+        Task<AuthenticationResponse> GoogleLoginAsync(SocialLoginDTO request, string role = "Business");
     }
 }

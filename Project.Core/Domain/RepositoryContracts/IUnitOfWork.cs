@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Project.Core.Domain.RepositoryContracts
 {
@@ -15,8 +16,13 @@ namespace Project.Core.Domain.RepositoryContracts
         IBusinessSubscriptionRepository BusinessSubscriptions { get; }
         //IGenericRepository<SubscriptionPlan> SubscriptionPlans { get; } // ده Generic كافي لأنه بسيط
         IEventBookingRepository EventBookings { get; }
+        IEventPaymentRepository EventPayments { get; }
+        IEventRepository Events { get; }
 
         //Task<int> CompleteAsync();
         Task<int> SaveChangesAsync();
+        Task<IDbContextTransaction> BeginTransactionAsync();
+        IExecutionStrategy CreateExecutionStrategy();
+
     }
 }

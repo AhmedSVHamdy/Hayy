@@ -15,5 +15,6 @@ namespace Project.Core.Domain.RepositoryContracts
         // بدل Event خليها ترجع الـ DTO
         Task UpdateAsync(Event eventItem);
         Task DeleteAsync(Event eventItem);
+        Task<Event?> GetEventWithLockAsync(Guid eventId);
     }
 }

@@ -1,4 +1,5 @@
-﻿using Project.Core.DTOs.Payments;
+﻿using Project.Core.DTO;
+using Project.Core.DTOs.Payments;
 using Project.Core.DTOs.Paymob;
 using System;
 using System.Collections.Generic;
@@ -6,10 +7,9 @@ using System.Text;
 
 namespace Project.Core.ServiceContracts
 {
-    internal interface IEventPaymentService
+    public interface IEventPaymentService
     {
-        Task<string> InitiatePaymentAsync(InitiatePaymentDto dto);
-
-        Task ProcessWebhookAsync(PaymobWebhookDto dto);
+        Task<string> InitiateEventPaymentAsync(InitiateEventPaymentDto dto);
+        Task ProcessEventWebhookAsync(PaymobWebhookDto dto);
     }
 }

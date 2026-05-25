@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
@@ -11,6 +12,7 @@ using QRCoder;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.EntityFrameworkCore; // ← أضف ده
 using static Project.Core.DTO.CreateEventBooking;
 
 namespace Project.Core.Services
@@ -42,81 +44,95 @@ namespace Project.Core.Services
 
         public async Task<BookingResponseDto> CreateBookingAsync(Guid userId, CreateBookingDto dto)
         {
-            // 1. Validation
             var validationResult = await _validator.ValidateAsync(dto);
             if (!validationResult.IsValid)
                 throw new ArgumentException(validationResult.Errors.First().ErrorMessage);
 
-            // 2. جلب الحدث (باستخدام UoW)
-            var @event = await _unitOfWork.GetRepository<Event>().GetByIdAsync(dto.EventId);
-            if (@event == null || @event.Status != EventStatus.Active)
-                throw new ArgumentException("هذا الحدث غير متاح حالياً.");
+            // ✅ الحل: استخدم ExecutionStrategy
+            var executionStrategy = _unitOfWork.CreateExecutionStrategy();
 
-            // 3. حساب التذاكر المؤكدة والمعلقة (باستخدام UoW)
-            int currentValidBookings = await _unitOfWork.EventBookings.GetValidTicketsCountAsync(dto.EventId);
+            BookingResponseDto result = null;
 
-            // 4. تجهيز أوبجيكت الحجز
-            var booking = new EventBooking
-            {
-                UserId = userId,
-                EventId = dto.EventId,
-                TicketQuantity = dto.TicketQuantity,
-                IsPaid = false,
-                PaymentMethod = PaymentMethod.CreditCard
-            };
-
-            // 5. اللوجيك الحاسم: هل فيه كراسي فاضية؟
-            if (currentValidBookings + dto.TicketQuantity <= @event.Capacity)
-            {
-                // فيه مكان!
-                booking.Status = BookingStatus.Pending;
-                booking.PaymentDeadline = DateTime.UtcNow.AddMinutes(1);
-            }
-            else if (@event.IsWaitlistEnabled)
-            {
-                // ========================================================
-                // 🔥 الحماية الجديدة: هل الإيفنت اتباع بالكامل (Confirmed/Used/Completed)؟
-                // ========================================================
-                int guaranteedTickets = await _unitOfWork.EventBookings.GetGuaranteedTicketsCountAsync(dto.EventId);
-
-                // لو التذاكر اللي اتقفلت نهائياً جابت آخر الإيفنت، ارفض الحجز فوراً
-                if (guaranteedTickets >= @event.Capacity)
+            await executionStrategy.ExecuteAsync(
+                state: (userId, dto),  // بنمرر الـ state صراحة
+                operation: async (_, state, ct) =>
                 {
-                    throw new ArgumentException("عفواً، نفدت جميع التذاكر بالكامل ولا توجد أماكن شاغرة في قائمة الانتظار.");
-                }
+                    var (uid, bookingDto) = state;
+                    await using var transaction = await _unitOfWork.BeginTransactionAsync();
+                    try
+                    {
+                        var @event = await _unitOfWork.Events.GetEventWithLockAsync(bookingDto.EventId);
 
-                // لو لسه فيه أمل (تذاكر Pending ممكن تتلغي)، كمل وحطه في الويت ليست
-                int currentWaitlistCount = await _unitOfWork.EventBookings.GetWaitlistTicketsCountAsync(dto.EventId);
+                        if (@event == null || @event.Status != EventStatus.Active)
+                            throw new ArgumentException("هذا الحدث غير متاح حالياً.");
 
-                if (currentWaitlistCount + dto.TicketQuantity <= @event.WaitlistLimit)
-                {
-                    booking.Status = BookingStatus.Waitlisted;
-                    booking.WaitlistPosition = await _unitOfWork.EventBookings.GetMaxWaitlistPositionAsync(@event.Id) + 1;
-                }
-                else
-                {
-                    throw new ArgumentException("نفدت جميع التذاكر واكتملت قائمة الانتظار.");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("عفواً، نفدت جميع التذاكر.");
-            }
+                        int currentValidBookings = await _unitOfWork.EventBookings.GetValidTicketsCountAsync(bookingDto.EventId);
 
-            // 6. حفظ في الداتابيز (باستخدام UoW)
-            await _unitOfWork.EventBookings.AddAsync(booking);
-            await _unitOfWork.SaveChangesAsync();
+                        var booking = new EventBooking
+                        {
+                            UserId = uid,
+                            EventId = bookingDto.EventId,
+                            TicketQuantity = bookingDto.TicketQuantity,
+                            IsPaid = false,
+                            PaymentMethod = PaymentMethod.CreditCard
+                        };
 
-            // 7. تشغيل العسكري
-            if (booking.Status == BookingStatus.Pending)
-            {
-                BackgroundJob.Schedule<IEventBookingService>(
-                    service => service.CancelUnpaidBookingAsync(booking.Id),
-                    TimeSpan.FromMinutes(15)
-                );
-            }
+                        if (currentValidBookings + bookingDto.TicketQuantity <= @event.Capacity)
+                        {
+                            booking.Status = BookingStatus.Pending;
+                            booking.PaymentDeadline = DateTime.UtcNow.AddMinutes(15);
+                        }
+                        else if (@event.IsWaitlistEnabled)
+                        {
+                            int guaranteedTickets = await _unitOfWork.EventBookings.GetGuaranteedTicketsCountAsync(bookingDto.EventId);
 
-            return _mapper.Map<BookingResponseDto>(booking);
+                            if (guaranteedTickets >= @event.Capacity)
+                                throw new ArgumentException("عفواً، نفدت جميع التذاكر بالكامل.");
+
+                            int currentWaitlistCount = await _unitOfWork.EventBookings.GetWaitlistTicketsCountAsync(bookingDto.EventId);
+
+                            if (currentWaitlistCount + bookingDto.TicketQuantity <= @event.WaitlistLimit)
+                            {
+                                booking.Status = BookingStatus.Waitlisted;
+                                booking.WaitlistPosition = await _unitOfWork.EventBookings
+                                                                .GetMaxWaitlistPositionAsync(@event.Id) + 1;
+                            }
+                            else
+                            {
+                                throw new ArgumentException("نفدت جميع التذاكر واكتملت قائمة الانتظار.");
+                            }
+                        }
+                        else
+                        {
+                            throw new ArgumentException("عفواً، نفدت جميع التذاكر.");
+                        }
+
+                        await _unitOfWork.EventBookings.AddAsync(booking);
+                        await _unitOfWork.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        if (booking.Status == BookingStatus.Pending)
+                        {
+                            BackgroundJob.Schedule<IEventBookingService>(
+                                service => service.CancelUnpaidBookingAsync(booking.Id),
+                                TimeSpan.FromMinutes(15));
+                        }
+
+                        result = _mapper.Map<BookingResponseDto>(booking);
+
+                        return result; // ← لازم ترجع قيمة
+                    }
+                    catch
+                    {
+                        await transaction.RollbackAsync();
+                        throw;
+                    }
+                },
+                verifySucceeded: null,
+                cancellationToken: default
+            );
+
+            return result;
         }
         public async Task<IEnumerable<BookingResponseDto>> GetUserBookingsAsync(Guid userId)
         {
@@ -277,12 +293,12 @@ namespace Project.Core.Services
                     // نرقيه ونخليه Pending ونديله 15 دقيقة للدفع
                     nextInWaitlist.Status = BookingStatus.Pending;
                     nextInWaitlist.WaitlistPosition = null;
-                    nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(1);
+                    nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(15);
 
                     // نقول لـ Hangfire يصحى لليوزر ده كمان 15 دقيقة
                     BackgroundJob.Schedule<IEventBookingService>(
                         service => service.CancelUnpaidBookingAsync(nextInWaitlist.Id),
-                        TimeSpan.FromMinutes(1)
+                        TimeSpan.FromMinutes(15)
                     );
 
                     // ==========================================

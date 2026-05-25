@@ -55,6 +55,8 @@ namespace Project.Core
             services.AddScoped<IEventBookingService, EventBookingService>();
             services.AddScoped<IOfferService, OfferService>();
             services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
+            services.AddScoped<IEventPaymentService, EventPaymentService>();
+            services.Configure<PaymobEventSettings>(configuration.GetSection("PaymobEventSettings"));
 
             services.AddScoped<IAdminService, AdminService>();
             // تسجيل خدمة الدفع (PaymentService)
