@@ -58,7 +58,7 @@ namespace WebApi.Controllers
 
                 return Ok(new
                 {
-                    Message = "تم الحجز بنجاح. أمامك 15 دقيقة لإتمام الدفع وإلا سيتم إلغاء الحجز.",
+                    Message = "تم الحجز بنجاح. أمامك 2 دقيقة لإتمام الدفع وإلا سيتم إلغاء الحجز.",
                     Data = result
                 });
             }

@@ -127,7 +127,7 @@ namespace Project.Infrastructure
             // ====================================================
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            
+
 
             services.AddScoped<IUserLogRepository, UserLogRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
@@ -150,6 +150,7 @@ namespace Project.Infrastructure
             services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
             services.AddScoped<IEventPaymentService, EventPaymentService>();
+            services.AddScoped<IRecommendedItemRepository, RecommendedItemRepository>(); // 👈 استخدم الموجود
            
 
 

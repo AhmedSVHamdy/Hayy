@@ -26,7 +26,7 @@
 //        public async Task<IActionResult> CreateLog([FromBody] CreateUserLogDto dto)
 //        {
 //            if (!ModelState.IsValid)
-//                return BadRequest(ModelState);
+//                return BadRequest(ModelState) 
 
 //            await _userLogService.LogActivityAsync(dto);
 

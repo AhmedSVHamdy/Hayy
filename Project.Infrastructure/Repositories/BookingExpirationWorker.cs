@@ -55,15 +55,15 @@ namespace Project.Core.Services
 
                         if (nextInWaitlist != null)
                         {
-                            // 4. مبروك! دورك جه.. هنديله 15 دقيقة يدفع
+                            // 4. مبروك! دورك جه.. هنديله 2 دقيقة يدفع
                             nextInWaitlist.Status = BookingStatus.Pending;
-                            nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(15);
+                            nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(2);
                             nextInWaitlist.WaitlistPosition = null; // نطلعه من الطابور
 
                             // 5. نبعتله إشعار على الموبايل بـ SignalR (اليوزر نفسه)
                             await notifier.SendNotificationToUserWaitlist(
                                 nextInWaitlist.UserId.ToString(),
-                                "مبروك! تذكرتك من قائمة الانتظار أصبحت متاحة. أمامك 15 دقيقة لإتمام الدفع."
+                                "مبروك! تذكرتك من قائمة الانتظار أصبحت متاحة. أمامك 2 دقيقة لإتمام الدفع."
                             );
                         }
                     }

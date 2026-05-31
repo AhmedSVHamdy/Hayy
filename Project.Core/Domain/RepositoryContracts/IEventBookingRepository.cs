@@ -21,6 +21,7 @@ namespace Project.Core.Domain.RepositoryContracts
         Task<int> GetConfirmedTicketsCountAsync(Guid eventId);
         Task<int> GetValidTicketsCountAsync(Guid eventId);
         Task<int> GetWaitlistTicketsCountAsync(Guid eventId);
+        Task<int> GetPendingTicketsCountAsync(Guid eventId); // 🔥 جديد
         Task<int> GetGuaranteedTicketsCountAsync(Guid eventId);
     }
 }

@@ -16,6 +16,9 @@ namespace Project.Core.DTO.Places
         // اسم التصنيف (بدل الـ ID)
         public string CategoryName { get; set; }
 
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+
         // تفاصيل الوسوم
         public List<TagDto> Tags { get; set; }
 

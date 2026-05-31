@@ -2,6 +2,7 @@
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Project.Core.BackgroundJobs;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts; // تأكد من الاسم الصحيح
 using Project.Core.DTO;
@@ -56,6 +57,8 @@ namespace Project.Core
             services.AddScoped<IOfferService, OfferService>();
             services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
             services.AddScoped<IEventPaymentService, EventPaymentService>();
+            services.AddScoped<IRecommendationService, RecommendationService>();
+            services.AddScoped<RecommendationSyncJob>();
             services.Configure<PaymobEventSettings>(configuration.GetSection("PaymobEventSettings"));
 
             services.AddScoped<IAdminService, AdminService>();
@@ -84,6 +87,8 @@ namespace Project.Core
             services.AddAutoMapper(cfg => cfg.AddProfile<OfferProfile>());
             services.AddAutoMapper(cfg => cfg.AddProfile<SubscriptionPlanProfile>());
 
+            // Services
+            
 
             return services;
         }

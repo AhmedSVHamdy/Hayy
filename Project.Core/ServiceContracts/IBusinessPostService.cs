@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using static Project.Core.DTO.CerateBusinessPostDto;
+using static Project.Core.DTO.CeratePostComment;
 
 namespace Project.Core.ServiceContracts
 {
@@ -15,5 +16,11 @@ namespace Project.Core.ServiceContracts
 
         Task<PostResponseDto> UpdatePostAsync(Guid postId, UpdatePostDto dto, Guid userId);
         Task DeletePostAsync(Guid postId, Guid userId);
+
+        // 👈 جديد: جيب التعليقات على البوست
+        Task<IEnumerable<CommentResponseDto>> GetPostCommentsAsync(Guid postId);
+
+        // 👈 جديد: الرد على تعليق
+        Task<CommentResponseDto> ReplyToCommentAsync(ReplyCommentDto dto);
     }
 }

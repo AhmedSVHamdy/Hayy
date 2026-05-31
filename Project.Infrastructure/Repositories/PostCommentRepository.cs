@@ -30,13 +30,11 @@ namespace Project.Infrastructure.Repositories
 
         public async Task<IEnumerable<PostComment>> GetCommentsByPostIdAsync(Guid postId)
         {
-            // بنجيب الكومنتات اللي ملهاش أب (ParentCommentId == null) يعني الرئيسية
-            // وبنعمل Include للردود (Replies) واليوزر
             return await _context.PostComments
-                .Where(c => c.PostId == postId && c.ParentCommentId == null)
-                .Include(c => c.User) // بيانات صاحب الكومنت الأصلي
-                .Include(c => c.Replies) // الردود
-                    .ThenInclude(r => r.User) // بيانات أصحاب الردود
+                .Where(c => c.PostId == postId && c.ParentCommentId == null) // التعليقات الأساسية فقط
+                .Include(c => c.User)
+                .Include(c => c.Replies)
+                    .ThenInclude(r => r.User)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
         }

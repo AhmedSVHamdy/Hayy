@@ -13,10 +13,15 @@ namespace Project.Core.DTO
             public Guid UserId { get; set; }
             public Guid? ParentCommentId { get; set; }
             public string Content { get; set; } = string.Empty;
-
-
-
         }
+
+        public class ReplyCommentDto
+        {
+            public Guid CommentId { get; set; }  // 👈 الرد على أي تعليق
+            public Guid UserId { get; set; }     // 👈 من اليوزر ده (البزنس)
+            public string Content { get; set; } = string.Empty;
+        }
+
         public class CommentResponseDto
         {
             public Guid Id { get; set; }

@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Project.Core.DTO;
 using Project.Core.Helpers;
 using Project.Core.ServiceContracts;
 using static Project.Core.DTO.CerateBusinessPostDto;
+using static Project.Core.DTO.CeratePostComment;
 
 namespace WebApi.Controllers
 {
@@ -191,5 +193,70 @@ namespace WebApi.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Retrieves all comments for a specific post.
+        /// </summary>
+        /// <param name="postId">The unique identifier of the post for which to retrieve comments.</param>
+        /// <returns>An <see cref="IActionResult"/> containing the list of comments for the specified post.</returns>
+        [HttpGet("{postId}/comments")]
+        [Authorize]
+        public async Task<IActionResult> GetPostComments(Guid postId)
+        {
+            try
+            {
+                var comments = await _postService.GetPostCommentsAsync(postId);
+                return Ok(comments);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Allows a business user to reply to a specific comment on a post. The user must be authenticated and have the 'Business' role.
+        /// </summary>
+        /// <param name="commentId">The unique identifier of the comment to reply to.</param>
+        /// <param name="request">The request object containing the reply content.</param>
+        /// <returns>An <see cref="IActionResult"/> indicating the result of the reply operation.</returns>
+        [HttpPost("{commentId}/reply")]
+        [Authorize(Roles = "Business")]
+        public async Task<IActionResult> ReplyToComment(Guid commentId, [FromBody] ReplyToCommentRequest request)
+        {
+            try
+            {
+                var userId = User.GetUserId();
+                if (userId == Guid.Empty)
+                    return Unauthorized("Token is invalid or missing User ID claim.");
+
+                var dto = new CeratePostComment.ReplyCommentDto
+                {
+                    CommentId = commentId,
+                    UserId = userId,
+                    Content = request.Content
+                };
+
+                var reply = await _postService.ReplyToCommentAsync(dto);
+                return Ok(new { success = true, data = reply });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Request model للرد على التعليق
+    /// </summary>
+    public class ReplyToCommentRequest
+    {
+        public string Content { get; set; } = string.Empty;
     }
 }
+

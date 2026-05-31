@@ -10,11 +10,12 @@ using System.Threading.Tasks;
 using static Project.Core.DTO.CerateBusinessPostDto;
 using Hangfire; // 👈 1. ضيفنا النيم سبيس ده
 
-namespace Project.Core.Services
+namespace Project.Core.Services     
 {
     public class BusinessPostService : IBusinessPostService
     {
         private readonly IBusinessPostRepository _postRepository;
+        private readonly IPostCommentRepository _commentRepository; // 👈 جديد
         private readonly IMapper _mapper;
         private readonly INotifier _notifier;
         private readonly IPlaceRepository _placeRepository;
@@ -22,12 +23,14 @@ namespace Project.Core.Services
 
         public BusinessPostService(
             IBusinessPostRepository postRepository,
+            IPostCommentRepository commentRepository, // 👈 جديد
             IMapper mapper,
             INotifier notifier,
             IPlaceRepository placeRepository,
             IBackgroundJobClient backgroundJobClient) // 👈 3. حقناه هنا
         {
             _postRepository = postRepository;
+            _commentRepository = commentRepository; // 👈 جديد
             _mapper = mapper;
             _notifier = notifier;
             _placeRepository = placeRepository;
@@ -161,5 +164,48 @@ namespace Project.Core.Services
             // تأكد إنك بتعمل SaveChangesAsync جوه دالة الـ Delete في الريبو
         }
 
+        public async Task<IEnumerable<CeratePostComment.CommentResponseDto>> GetPostCommentsAsync(Guid postId)
+        {
+            // 1. التحقق من وجود البوست
+            var post = await _postRepository.GetPostByIdAsync(postId);
+            if (post == null)
+                throw new ArgumentException("البوست غير موجود.");
+
+            // 2. جيب التعليقات الأساسية فقط (بدون ردود)
+            var comments = await _commentRepository.GetCommentsByPostIdAsync(postId);
+
+            // 3. حول التعليقات لـ DTO مع الردود المتداخلة
+            return _mapper.Map<IEnumerable<CeratePostComment.CommentResponseDto>>(comments);
+        }
+
+        public async Task<CeratePostComment.CommentResponseDto> ReplyToCommentAsync(CeratePostComment.ReplyCommentDto dto)
+        {
+            // 1. التحقق من وجود التعليق الأصلي
+            var parentComment = await _commentRepository.GetCommentByIdAsync(dto.CommentId);
+            if (parentComment == null)
+                throw new ArgumentException("التعليق المراد الرد عليه غير موجود.");
+
+            // 2. التحقق من وجود البوست
+            var post = await _postRepository.GetPostByIdAsync(parentComment.PostId);
+            if (post == null)
+                throw new ArgumentException("البوست غير موجود.");
+
+            // 3. إنشاء تعليق جديد (الرد)
+            var reply = new PostComment
+            {
+                Id = Guid.NewGuid(),
+                PostId = parentComment.PostId,  // نفس الـ Post
+                UserId = dto.UserId,            // البزنس هو اللي بيرد
+                ParentCommentId = dto.CommentId, // رد على التعليق ده
+                Content = dto.Content,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // 4. حفظ الرد
+            await _commentRepository.AddCommentAsync(reply);
+
+            // 5. حول لـ DTO وارجع
+            return _mapper.Map<CeratePostComment.CommentResponseDto>(reply);
+        }
     }
 }

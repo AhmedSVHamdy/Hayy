@@ -103,6 +103,15 @@ namespace Project.Infrastructure.Repositories
                 .Where(b => b.EventId == eventId && b.Status == BookingStatus.Waitlisted)
                 .SumAsync(b => b.TicketQuantity);
         }
+
+        // 🔥 دالة جديدة: حساب الـ Pending Tickets
+        public async Task<int> GetPendingTicketsCountAsync(Guid eventId)
+        {
+            return await _context.EventBookings
+                .Where(b => b.EventId == eventId && b.Status == BookingStatus.Pending)
+                .SumAsync(b => b.TicketQuantity);
+        }
+
         public async Task<int> GetGuaranteedTicketsCountAsync(Guid eventId)
         {
             return await _context.EventBookings
@@ -112,6 +121,6 @@ namespace Project.Infrastructure.Repositories
                             b.Status == BookingStatus.Completed))
                 .SumAsync(b => b.TicketQuantity);
         }
-        
+
     }
 }

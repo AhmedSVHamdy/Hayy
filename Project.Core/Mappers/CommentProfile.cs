@@ -23,7 +23,9 @@ namespace Project.Core.Mappers
 
             // Entity -> Output
             CreateMap<PostComment, CommentResponseDto>()
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName))
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => 
+                    string.IsNullOrEmpty(src.User.FullName) ? src.User.UserName : src.User.FullName))
+                .ForMember(dest => dest.UserImage, opt => opt.MapFrom(src => src.User.ProfileImage))
                 .ForMember(dest => dest.Replies, opt => opt.MapFrom(src => src.Replies));
         }
     }

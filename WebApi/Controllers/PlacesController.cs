@@ -70,7 +70,7 @@ namespace WebApi.Controllers
         /// <returns>An <see cref="IActionResult"/> containing a collection of place objects. The response has a status code of
         /// 200 (OK) with the list of places if successful.</returns>
         [HttpGet]
-        [Authorize(Roles = "User")] 
+        [Authorize] 
         public async Task<IActionResult> GetAll()
         {
             var places = await _placeService.GetAllPlacesAsync();

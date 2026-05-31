@@ -29,7 +29,7 @@ namespace WebApi.Controllers
         /// <returns>An <see cref="IActionResult"/> that represents the result of the operation. Returns a 200 OK response with
         /// the created comment data if successful, or a 401 Unauthorized response if the user is not authenticated.</returns>
         [HttpPost]
-        [Authorize(Roles = "User")]
+        [Authorize]
         public async Task<IActionResult> AddComment([FromBody] CreateCommentDto dto )
         {
             // 1️⃣ الأمان: هات الـ ID من التوكن
@@ -85,7 +85,7 @@ namespace WebApi.Controllers
         /// success, 404 Not Found if the comment does not exist, 403 Forbidden if the user is not authorized, 401
         /// Unauthorized if the user session has expired, or 400 Bad Request for other errors.</returns>
         [HttpPut("{commentId}")]
-        [Authorize(Roles = "User")] // لازم يكون يوزر
+        [Authorize] 
         public async Task<IActionResult> UpdateComment(Guid commentId, [FromBody] UpdateCommentDto dto)
         {
             var userId = User.GetUserId();
@@ -125,7 +125,7 @@ namespace WebApi.Controllers
         /// not exist; 403 Forbidden if the user is not authorized to delete the comment; or 400 Bad Request for other
         /// errors.</returns>
         [HttpDelete("{commentId}")]
-        [Authorize(Roles = "User")] // لازم يكون يوزر
+        [Authorize] 
         public async Task<IActionResult> DeleteComment(Guid commentId)
         {
             var userId = User.GetUserId();
