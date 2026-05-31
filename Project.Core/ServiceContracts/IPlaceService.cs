@@ -13,5 +13,13 @@ namespace Project.Core.ServiceContracts
         Task<List<PlaceResponseDto>> BasicSearchAsync(string searchTerm, Guid? categoryId);
         Task<IEnumerable<PlaceResponseDto>> GetPlacesByCategoryIdAsync(Guid categoryId);
 
+        // جيب الأماكن الخاصة ببيزنس معين
+        Task<IEnumerable<PlaceResponseDto>> GetPlacesByBusinessAsync(Guid businessId);
+
+        // حذف مكان (Soft Delete)
+        Task<bool> DeletePlaceAsync(Guid placeId, Guid businessId);
+
+        // تعديل بيانات مكان
+        Task<PlaceResponseDto> UpdatePlaceAsync(Guid placeId, Guid businessId, UpdatePlaceDto dto);
     }
 }

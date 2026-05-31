@@ -107,6 +107,9 @@ namespace Project.Core.Services
             string currentStatus = await GetUserVerificationStatus(user);
             bool hasActiveSubscription = await HasActiveSubscriptionAsync(user);
 
+            // جيب الـ BusinessId من الداتابيز عشان نرجعه في الـ Response
+            var business = await _businessRepo.GetBusinessByUserIdAsync(user.Id);
+
             return new AuthenticationResponse
             {
                 PersonName = user.FullName,
@@ -118,7 +121,8 @@ namespace Project.Core.Services
                 UserType = user.UserType,
                 VerificationStatus = currentStatus,
                 HasActiveSubscription = hasActiveSubscription,
-                Id = user.Id
+                Id = user.Id,
+                BusinessId = business?.Id  // ✅ هيبقى null لو مش Business أو مش مسجل بيانات بعد
             };
         }
 

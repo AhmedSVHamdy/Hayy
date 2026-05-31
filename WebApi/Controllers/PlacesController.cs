@@ -1,37 +1,31 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Project.Core.Domain.Entities;
+using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO.Places;
-using Project.Core.Helpers;
 using Project.Core.ServiceContracts;
+using System.Security.Claims;
 
 namespace WebApi.Controllers
 {
-   
     [ApiController]
     [Route("api/Places")]
     public class PlacesController : ControllerBase
     {
         private readonly IPlaceService _placeService;
+        private readonly IBusinessRepository _businessRepo;
 
-        public PlacesController(IPlaceService placeService)
+        public PlacesController(IPlaceService placeService, IBusinessRepository businessRepo)
         {
             _placeService = placeService;
+            _businessRepo = businessRepo;
         }
+
         /// <summary>
-        /// Creates a new place using the specified data.
+        /// إنشاء مكان جديد — خاص بصاحب البيزنس فقط
         /// </summary>
-        /// <remarks>This action is restricted to users in the "Business" role. The request body must
-        /// contain valid place information. If the creation is successful, the response includes a location header
-        /// pointing to the newly created resource.</remarks>
-        /// <param name="dto">The data transfer object containing the details of the place to create. Must not be null and must satisfy
-        /// all validation requirements.</param>
-        /// <returns>An <see cref="IActionResult"/> that represents the result of the create operation. Returns a 201 Created
-        /// response with the created place if successful; otherwise, returns a 400 Bad Request with validation or error
-        /// details.</returns>
         [HttpPost]
-        [Authorize(Roles = "Business")] // لازم يكون صاحب مكان
+        [Authorize(Roles = "Business")]
         public async Task<IActionResult> Create([FromBody] CreatePlaceDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -45,30 +39,24 @@ namespace WebApi.Controllers
             {
                 var innerMessage = ex.InnerException?.Message ?? ex.Message;
                 return BadRequest(new { message = "فشل الحفظ", error = innerMessage });
-               // return BadRequest(new { message = ex.Message });
             }
         }
+
         /// <summary>
-        /// Retrieves the details of a place by its unique identifier.
+        /// جيب تفاصيل مكان بالـ ID
         /// </summary>
-        /// <param name="id">The unique identifier of the place to retrieve.</param>
-        /// <returns>An <see cref="IActionResult"/> containing the place details if found; otherwise, a NotFound result if the
-        /// place does not exist.</returns>
         [HttpGet("{id}")]
-        [Authorize] 
+        [Authorize]
         public async Task<IActionResult> GetById(Guid id)
         {
             var place = await _placeService.GetPlaceByIdAsync(id);
             if (place == null) return NotFound("المكان غير موجود");
             return Ok(place);
         }
+
         /// <summary>
-        /// Retrieves a list of all places accessible to the current user.
+        /// جيب كل الأماكن — للمستخدمين العاديين فقط
         /// </summary>
-        /// <remarks>This action requires the caller to be authenticated and authorized with the "User"
-        /// role. Only users with the appropriate role can access the list of places.</remarks>
-        /// <returns>An <see cref="IActionResult"/> containing a collection of place objects. The response has a status code of
-        /// 200 (OK) with the list of places if successful.</returns>
         [HttpGet]
         [Authorize] 
         public async Task<IActionResult> GetAll()
@@ -77,20 +65,99 @@ namespace WebApi.Controllers
             return Ok(places);
         }
 
-        [HttpGet("category/{categoryId}")] 
+        /// <summary>
+        /// جيب الأماكن بالتصنيف
+        /// </summary>
+        [HttpGet("category/{categoryId}")]
         public async Task<IActionResult> GetPlacesByCategoryIdAsync(Guid categoryId)
         {
-            // 1. استدعاء الدالة من الـ Service
             var places = await _placeService.GetPlacesByCategoryIdAsync(categoryId);
 
-            // 2. التحقق لو مفيش أماكن (اختياري: ممكن ترجع قائمة فاضية أو NotFound)
             if (places == null || !places.Any())
-            {
                 return NotFound($"لا توجد أماكن مرتبطة بالتصنيف المعرف بـ: {categoryId}");
-            }
 
-            // 3. إرجاع البيانات بنجاح
             return Ok(places);
+        }
+
+        /// <summary>
+        /// جيب أماكن البيزنس اكونت اللي مسجل دخول — لصاحب البيزنس فقط
+        /// </summary>
+        [HttpGet("my-places")]
+        [Authorize(Roles = "Business")]
+        public async Task<IActionResult> GetMyPlaces()
+        {
+            var businessId = await GetBusinessIdAsync();
+            if (businessId == null)
+                return Unauthorized("مش قادر أحدد هوية البيزنس");
+
+            var places = await _placeService.GetPlacesByBusinessAsync(businessId.Value);
+            return Ok(places);
+        }
+
+        /// <summary>
+        /// تعديل بيانات مكان — لصاحب المكان فقط
+        /// </summary>
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Business")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePlaceDto dto)
+        {
+            var businessId = await GetBusinessIdAsync();
+            if (businessId == null)
+                return Unauthorized("مش قادر أحدد هوية البيزنس");
+
+            try
+            {
+                var result = await _placeService.UpdatePlaceAsync(id, businessId.Value, dto);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// حذف مكان (Soft Delete) — لصاحب المكان فقط
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Business")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var businessId = await GetBusinessIdAsync();
+            if (businessId == null)
+                return Unauthorized("مش قادر أحدد هوية البيزنس");
+
+            try
+            {
+                await _placeService.DeletePlaceAsync(id, businessId.Value);
+                return NoContent(); // 204
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid(); // 403
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // ===================== Helper =====================
+
+        /// <summary>
+        /// بيجيب الـ UserId من الـ Token ثم يجيب الـ BusinessId من الداتابيز
+        /// </summary>
+        private async Task<Guid?> GetBusinessIdAsync()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(claim, out var userId)) return null;
+
+            var business = await _businessRepo.GetBusinessByUserIdAsync(userId);
+            return business?.Id;
         }
     }
 }

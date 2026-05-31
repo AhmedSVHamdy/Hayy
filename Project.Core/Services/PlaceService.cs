@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq; // محتاجين دي عشان Any
+using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using Project.Core.Domain.Entities;
@@ -15,20 +15,20 @@ namespace Project.Core.Services
         private readonly IPlaceRepository _placeRepo;
         private readonly ICategoryRepository _categoryRepo;
         private readonly IGenericRepository<Tag> _tagRepo;
-        private readonly IUnitOfWork _unitOfWork; // 👈 1. ضيفنا ده
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
         public PlaceService(
             IPlaceRepository placeRepo,
             ICategoryRepository categoryRepo,
             IGenericRepository<Tag> tagRepo,
-            IUnitOfWork unitOfWork, // 👈 2. ضيفنا ده في الـ Constructor
+            IUnitOfWork unitOfWork,
             IMapper mapper)
         {
             _placeRepo = placeRepo;
             _categoryRepo = categoryRepo;
             _tagRepo = tagRepo;
-            _unitOfWork = unitOfWork; // 👈 3. وسجلناه هنا
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
 
@@ -38,24 +38,17 @@ namespace Project.Core.Services
             var category = await _categoryRepo.GetByIdAsync(dto.CategoryId);
             if (category == null)
                 throw new Exception("التصنيف غير موجود");
-            
 
             // 2. التحويل
             var place = _mapper.Map<Place>(dto);
             place.Id = Guid.NewGuid();
             place.IsActive = true;
 
-            
-
-            // 👇 السطر اللي بيكشف المستور
-            // اطبع القيمة دي في الـ Console قبل الحفظ مباشرة
-           await _placeRepo.AddAsync(place);
-            //await _unitOfWork.SaveChangesAsync();
+            await _placeRepo.AddAsync(place);
 
             // 3. إضافة الوسوم (Tags Logic)
             if (dto.TagIds != null && dto.TagIds.Any())
             {
-                // تحسين بسيط: بدل اللوب، ممكن نجيب التاجز الموجودة ونضيفها
                 foreach (var tagId in dto.TagIds)
                 {
                     var tag = await _tagRepo.GetByIdAsync(tagId);
@@ -70,30 +63,21 @@ namespace Project.Core.Services
                 }
             }
 
-            // 4. الإضافة (في الذاكرة فقط)
-            await _placeRepo.AddAsync(place);
-
-            // 5. الحفظ الفعلي في الداتابيز 🛑 (دي الخطوة اللي كانت ناقصة)
-            // تأكد إن اسم الدالة عندك في IUnitOfWork هو CompleteAsync أو SaveChangesAsync
+            // 4. الحفظ الفعلي في الداتابيز
             await _unitOfWork.SaveChangesAsync();
 
-            // 6. الإرجاع
+            // 5. الإرجاع
             var response = _mapper.Map<PlaceResponseDto>(place);
-
-            // تأكد إن البيانات دي راجعة صح
             response.CategoryName = category.Name;
 
             return response;
         }
+
         public async Task<IEnumerable<PlaceResponseDto>> GetPlacesByCategoryIdAsync(Guid categoryId)
         {
-            // 1. بننادي على الـ Repo عشان يجيب الأماكن
             var places = await _placeRepo.GetByCategoryIdAsync(categoryId);
-
-            // 2. بنعمل Mapping باستخدام AutoMapper
             return _mapper.Map<IEnumerable<PlaceResponseDto>>(places);
         }
-
 
         public async Task<PlaceResponseDto?> GetPlaceByIdAsync(Guid id)
         {
@@ -107,15 +91,94 @@ namespace Project.Core.Services
             var places = await _placeRepo.GetAllWithDetailsAsync();
             return _mapper.Map<IEnumerable<PlaceResponseDto>>(places);
         }
+
         public async Task<List<PlaceResponseDto>> BasicSearchAsync(string searchTerm, Guid? categoryId)
         {
-            // 1. بننادي على الـ Repo عشان يجيب الأماكن اللي بتطابق البحث
             var places = await _placeRepo.SearchPlacesAsync(searchTerm, categoryId);
+            return _mapper.Map<List<PlaceResponseDto>>(places);
+        }
 
-            // 2. بنحول الـ List<Place> لـ List<PlaceResponseDto> باستخدام الـ Mapper 
-            var response = _mapper.Map<List<PlaceResponseDto>>(places);
+        // ===================== الميثودات الجديدة =====================
 
-            return response;
+        public async Task<IEnumerable<PlaceResponseDto>> GetPlacesByBusinessAsync(Guid businessId)
+        {
+            var places = await _placeRepo.GetByBusinessIdAsync(businessId);
+            return _mapper.Map<IEnumerable<PlaceResponseDto>>(places);
+        }
+
+        public async Task<bool> DeletePlaceAsync(Guid placeId, Guid businessId)
+        {
+            var place = await _placeRepo.GetByIdWithDetailsForUpdateAsync(placeId);
+
+            if (place == null)
+                throw new Exception("المكان غير موجود");
+
+            // تأكد إن البيزنس ده صاحب المكان
+            if (place.BusinessId != businessId)
+                throw new UnauthorizedAccessException("مش مسموح تمسح مكان مش بتاعك");
+
+            // Soft Delete أفضل من الحذف الفعلي
+            place.IsActive = false;
+
+            _placeRepo.Update(place);
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<PlaceResponseDto> UpdatePlaceAsync(Guid placeId, Guid businessId, UpdatePlaceDto dto)
+        {
+            var place = await _placeRepo.GetByIdWithDetailsForUpdateAsync(placeId);
+
+            if (place == null)
+                throw new Exception("المكان غير موجود");
+
+            // تأكد إن البيزنس ده صاحب المكان
+            if (place.BusinessId != businessId)
+                throw new UnauthorizedAccessException("مش مسموح تعدل مكان مش بتاعك");
+
+            // عدّل بس الحاجات اللي بعتها (Partial Update)
+            if (dto.Name != null) place.Name = dto.Name;
+            if (dto.Description != null) place.Description = dto.Description;
+            if (dto.Latitude.HasValue) place.Latitude = (decimal)dto.Latitude.Value;
+            if (dto.Longitude.HasValue) place.Longitude = (decimal)dto.Longitude.Value;
+            if (dto.CoverImage != null) place.CoverImage = dto.CoverImage;
+
+            if (dto.CategoryId.HasValue)
+            {
+                var category = await _categoryRepo.GetByIdAsync(dto.CategoryId.Value);
+                if (category == null) throw new Exception("التصنيف غير موجود");
+                place.CategoryId = dto.CategoryId.Value;
+            }
+
+            // تحديث Tags لو بعتها
+            if (dto.TagIds != null)
+            {
+                place.PlaceTags.Clear();
+                foreach (var tagId in dto.TagIds)
+                {
+                    var tag = await _tagRepo.GetByIdAsync(tagId);
+                    if (tag != null)
+                        place.PlaceTags.Add(new PlaceTag { PlaceId = place.Id, TagId = tagId });
+                }
+            }
+
+            // تحديث OpeningHours لو بعتها
+            if (dto.OpeningHours != null)
+            {
+                place.OpeningHours.Clear();
+                var newHours = _mapper.Map<List<OpeningHour>>(dto.OpeningHours);
+                foreach (var hour in newHours)
+                {
+                    hour.PlaceId = place.Id;
+                    place.OpeningHours.Add(hour);
+                }
+            }
+
+            _placeRepo.Update(place);
+            await _unitOfWork.SaveChangesAsync();
+
+            return _mapper.Map<PlaceResponseDto>(place);
         }
     }
 }

@@ -3,9 +3,9 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<UserSecretsId>4ebd72a7-5e90-4396-bb08-c2e5cf02c0c1</UserSecretsId>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-	</PropertyGroup>
+	  <UserSecretsId>d2fe8910-3565-45c9-97c1-6551c01be98d</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
