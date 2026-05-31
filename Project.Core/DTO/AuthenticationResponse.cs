@@ -9,11 +9,11 @@
         public DateTime Expiration { get; set; }
         public string? RefreshToken { get; set; } = string.Empty;
         public DateTime RefreshTokenExpirationDateTime { get; set; }
-
         public string? UserType { get; set; }
         public string? VerificationStatus { get; set; }
-
-        // ✅ الجديد: هل عنده اشتراك نشط؟
         public bool HasActiveSubscription { get; set; }
+
+        // ✅ الجديد: BusinessId عشان الفرونت إند يقدر يستخدمه
+        public Guid? BusinessId { get; set; }
     }
 }
