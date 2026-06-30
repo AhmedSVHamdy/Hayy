@@ -73,5 +73,28 @@ namespace Project.Infrastructure.Repositories
             _context.Reviews.Update(review);
             await _context.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// جلب ريفيوهات اليوزر بالصفحات
+        /// </summary>
+        public async Task<List<Review>> GetReviewsByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize)
+        {
+            return await _context.Reviews
+                .Where(r => r.UserId == userId)        // فلتر برقم اليوزر
+                .Include(r => r.Place)                 // 👈 مهم: هات بيانات المكان
+                .OrderByDescending(r => r.CreatedAt)   // الأحدث الأول
+                .Skip((pageNumber - 1) * pageSize)     // فوت الصفحات اللي فاتت
+                .Take(pageSize)                        // هات العدد المطلوب بس
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// عد ريفيوهات اليوزر
+        /// </summary>
+        public async Task<int> GetCountByUserIdAsync(Guid userId)
+        {
+            return await _context.Reviews
+                .CountAsync(r => r.UserId == userId);
+        }
     }
 }

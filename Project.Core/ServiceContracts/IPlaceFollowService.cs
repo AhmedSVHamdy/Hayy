@@ -13,5 +13,7 @@ namespace Project.Core.ServiceContracts
         Task<PagedResult<PlaceFollowResponseDto>> GetFollowersByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize);
 
         Task<PagedResult<PlaceFollowResponseDto>> GetFollowedPlacesByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize);
+
+       // Task<PagedResult<PlaceFollowResponseDto>> GetFollowedPlacesByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize);
     }
 }

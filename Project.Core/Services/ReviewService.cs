@@ -150,5 +150,24 @@ namespace Project.Core.Services
             // 5. إرجاع النتيجة
             return _mapper.Map<ReviewResponseDto>(review);
         }
+
+        /// <summary>
+        /// جلب ريفيوهات اليوزر بالصفحات
+        /// </summary>
+        public async Task<PagedResult<ReviewResponseDto>> GetReviewsByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize)
+        {
+            if (pageNumber <= 0) pageNumber = 1;
+            if (pageSize <= 0) pageSize = 10;
+
+            // أ) هات ريفيوهات اليوزر
+            var reviews = await _reviewRepository.GetReviewsByUserIdPagedAsync(userId, pageNumber, pageSize);
+
+            // ب) هات العدد الكلي
+            var totalCount = await _reviewRepository.GetCountByUserIdAsync(userId);
+
+            // ج) التحويل والرد
+            var dtos = _mapper.Map<List<ReviewResponseDto>>(reviews);
+            return new PagedResult<ReviewResponseDto>(dtos, totalCount, pageNumber, pageSize);
+        }
     }
 }

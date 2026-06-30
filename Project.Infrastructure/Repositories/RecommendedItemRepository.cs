@@ -25,28 +25,22 @@ namespace Project.Infrastructure.Repositories
 
         public async Task<IEnumerable<RecommendedItem>> GetRecommendationsByUserIdAsync(Guid userId)
         {
-            return await _collection.Find(x => x.UserId == userId).ToListAsync();
+            return await _collection.Find(x => x.UserId == userId)
+                .SortByDescending(x => x.Score)  // ترتيب تنازلي بـ Score (الأفضل أولاً)
+                .ToListAsync();
         }
 
         private async Task CreateIndexesAsync()
         {
             var indexManager = _collection.Indexes;
 
-            // 1. Index على الـ UserId (لتسريع جلب توصيات يوزر معين)
+            // Index على الـ UserId (لتسريع جلب توصيات يوزر معين)
             var userIdIndex = Builders<RecommendedItem>.IndexKeys.Ascending(x => x.UserId);
             await indexManager.CreateOneAsync(new CreateIndexModel<RecommendedItem>(userIdIndex));
 
-            // 2. الـ TTL Index (المسح التلقائي بعد 30 يوم)
-            var ttlIndex = Builders<RecommendedItem>.IndexKeys.Ascending(x => x.UpdatedAt);
-            var ttlOptions = new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(30) };
-
-            await indexManager.CreateOneAsync(new CreateIndexModel<RecommendedItem>(ttlIndex, ttlOptions));
-
-            // 2. Compound Index على الـ ItemType و الـ ItemId (لتسريع الفلترة بنوع واسم العنصر)
-            var typeAndIdIndex = Builders<RecommendedItem>.IndexKeys
-                .Ascending(x => x.ItemType)
-                .Ascending(x => x.ItemId);
-            await indexManager.CreateOneAsync(new CreateIndexModel<RecommendedItem>(typeAndIdIndex));
+            // Index على PlaceId (لتسريع البحث بـ مكان معين)
+            var placeIdIndex = Builders<RecommendedItem>.IndexKeys.Ascending(x => x.PlaceId);
+            await indexManager.CreateOneAsync(new CreateIndexModel<RecommendedItem>(placeIdIndex));
         }
     }
 }

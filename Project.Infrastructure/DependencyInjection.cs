@@ -61,11 +61,8 @@ namespace Project.Infrastructure
                 {
                     cm.AutoMap();
 
-                    // تظبيط الـ ID
-                    cm.MapIdProperty(x => x.Id).SetIdGenerator(CombGuidGenerator.Instance);
-
-                    // تحويل الـ Enum لـ String عشان يتقرأ صح في المنجو
-                    cm.MapProperty(x => x.ItemType).SetSerializer(new EnumSerializer<ItemType>(BsonType.String));
+                    // تظبيط الـ ID - تحويل ObjectId إلى String
+                    cm.MapIdProperty(x => x.Id);
 
                     // تظبيط الـ Decimal لأعلى دقة
                     cm.MapProperty(x => x.Score).SetSerializer(new DecimalSerializer(BsonType.Decimal128));
