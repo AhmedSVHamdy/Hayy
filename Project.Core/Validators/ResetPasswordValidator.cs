@@ -11,7 +11,7 @@ namespace Project.Core.Validators
                 .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("Invalid email format.");
 
-            RuleFor(x => x.Token)
+            RuleFor(x => x.Otp)
                 .NotEmpty().WithMessage("Token is required.");
 
             RuleFor(x => x.NewPassword)

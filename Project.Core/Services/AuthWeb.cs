@@ -256,8 +256,22 @@ namespace Project.Core.Services
 
         private async Task SendConfirmationEmailInternal(User user)
         {
-            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
-            await _emailService.SendEmailAsync(user.Email!, "Verify Your Email", $"Your OTP is: {otp}");
+            try
+            {
+                // 1. توليد الـ OTP
+                var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+
+                // 2. إرسال الإيميل
+                await _emailService.SendEmailAsync(user.Email!, "Verify Your Email", $"Your OTP is: {otp}");
+
+                // 3. تأكيد النجاح في الكونسول
+                Console.WriteLine($"✅✅✅ تم إرسال الـ OTP ({otp}) بنجاح للإيميل: {user.Email}");
+            }
+            catch (Exception ex)
+            {
+                // 💡 السطر ده هيكشفلك المستخبي لو حصل أي مشكلة
+                Console.WriteLine($"❌ خطأ أثناء توليد أو إرسال الـ OTP: {ex.Message}");
+            }
         }
 
         public async Task ResendConfirmationEmailAsync(string email)
@@ -300,11 +314,11 @@ namespace Project.Core.Services
             var user = await _userManager.FindByEmailAsync(request.Email);
             if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found." });
 
-            var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider, request.Token);
+            var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider, request.Otp);
             if (!isValidOtp) return IdentityResult.Failed(new IdentityError { Description = "Invalid or expired OTP." });
 
-            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var result = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
+            var Otp = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, Otp, request.NewPassword);
 
             if (result.Succeeded)
             {
