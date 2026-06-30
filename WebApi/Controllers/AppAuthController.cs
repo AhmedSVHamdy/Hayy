@@ -123,48 +123,7 @@ namespace WebApi.Controllers
             }
         }
 
-        // =========================
-        // 4. CONFIRM EMAIL (Deep Link Redirect)
-        // =========================
-        /// <summary>
-        /// Confirms a user's email address and redirects to the mobile app via deep link.
-        /// </summary>
-        /// <param name="userId">The unique identifier of the user.</param>
-        /// <param name="token">The email confirmation token sent to the user's email.</param>
-        /// <returns>An HTML page that redirects to the mobile app with confirmation status.</returns>
-        /// <response code="200">Returns HTML content with deep link redirect.</response>
-        /// <response code="400">If userId or token parameters are invalid.</response>
-        /// <remarks>
-        /// This endpoint is designed for mobile deep linking. It returns an HTML page that automatically
-        /// redirects to the mobile app using the configured URL scheme (e.g., hayy://confirm-email).
-        /// </remarks>
-        [HttpPost("confirm-email-redirect")]
-        [AllowAnonymous]
-        public async Task<IActionResult> ConfirmEmailRedirect(string userId, string token)
-        {
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
-                return BadRequest("Invalid parameters");
-
-            // تفعيل الإيميل
-            var result = await _authService.ConfirmEmailAsync(userId, token);
-            string status = result.Succeeded ? "success" : "error";
-
-            var scheme = _configuration["AppSettings:MobileScheme"] ?? "hayy";
-
-            // تكوين الرابط: hayy://confirm-email?...
-            var appDeepLink = $"{scheme}://confirm-email?status=success&userId={userId}";
-
-            // صفحة HTML بسيطة للتحويل (أضمن من Redirect المباشر في بعض المتصفحات)
-            return Content($@"
-                <html>
-                    <body>
-                        <p>Redirecting to app...</p>
-                        <script>window.location.href = '{appDeepLink}';</script>
-                        <a href='{appDeepLink}'>Click here if not redirected</a>
-                    </body>
-                </html>", "text/html");
-        }
-
+        
         // =========================
         // 5. FORGOT PASSWORD
         // =========================
@@ -197,38 +156,7 @@ namespace WebApi.Controllers
             }
         }
 
-        // =========================
-        // 6. RESET PASSWORD REDIRECT
-        // =========================
-        /// <summary>
-        /// Redirects the user to the mobile app for password reset via deep link.
-        /// </summary>
-        /// <param name="email">The user's email address.</param>
-        /// <param name="token">The password reset token.</param>
-        /// <returns>An HTML page that redirects to the mobile app with reset parameters.</returns>
-        /// <response code="200">Returns HTML content with deep link redirect to reset password screen.</response>
-        /// <remarks>
-        /// This endpoint is designed to be accessed from email links and redirects to the mobile app
-        /// using a deep link containing the email and reset token.
-        /// </remarks>
-        [HttpPost("reset-password-redirect")]
-        [AllowAnonymous]
-        public IActionResult ResetPasswordRedirect(string email, string token)
-        {
-            var mobileDeepLink = $"hayy://reset-password?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
-
-            // نفس فكرة صفحة الـ HTML اللي أنت عاملها (ممتازة)
-            var htmlContent = $@"
-                <html>
-                    <head><title>Reset Password</title></head>
-                    <body>
-                        <h2>Opening App...</h2>
-                        <script>window.location.href = '{mobileDeepLink}';</script>
-                    </body>
-                </html>";
-
-            return Content(htmlContent, "text/html");
-        }
+        
 
         // =========================
         // 7. RESET PASSWORD (Final Step)

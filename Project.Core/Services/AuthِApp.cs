@@ -293,7 +293,7 @@ namespace Project.Core.Services
             var isValidOtp = await _userManager.VerifyTwoFactorTokenAsync(
                 user,
                 TokenOptions.DefaultEmailProvider,
-                request.Token);
+                request.Otp);
 
             if (!isValidOtp)
                 return IdentityResult.Failed(new IdentityError { Description = "Invalid or expired OTP." });
@@ -400,16 +400,27 @@ namespace Project.Core.Services
         // ==========================================================
         private async Task SendConfirmationEmailHelper(User user)
         {
-           // EnforceOtpRateLimit(user.Email!, "app-email-verification");
+            try
+            {
+                // توليد الـ OTP
+                var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
 
-            var otp = await _userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+                var message = $@"<h3>Welcome!</h3><p>Your verification OTP is:</p><h1>{otp}</h1>";
 
-            var message = $@"
-                <h3>Welcome!</h3>
-                <p>Your verification OTP is:</p>
-                <h1>{otp}</h1>";
+                // محاولة الإرسال
+                await _emailService.SendEmailAsync(user.Email!, "Verify your email (OTP)", message);
+            }
+            catch (Exception ex)
+            {
+                // 💡 هنا هيطبع لك السبب الحقيقي في الـ Console (سواء مشكلة باسورد، أو سيرفر، أو توكن)
+                Console.WriteLine($"❌ خطأ أثناء إرسال الإيميل: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                }
 
-            await _emailService.SendEmailAsync(user.Email!, "Verify your email (OTP)", message);
+                // عملنا catch عشان الأكونت يكمل تسجيل وميضربش الـ API، لكن يفضل مستقبلاً تاخد أكشن لو الإيميل منجحش
+            }
         }
 
 
