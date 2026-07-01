@@ -26,7 +26,8 @@ namespace WebApi.Controllers
         /// </summary>
         [HttpPost]
         [Authorize(Roles = "Business")]
-        public async Task<IActionResult> Create([FromBody] CreatePlaceDto dto)
+        [Consumes("multipart/form-data")] // ✅ عشان يقبل الصور
+        public async Task<IActionResult> Create([FromForm] CreatePlaceDto dto) // ✅ FromForm مش FromBody
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -99,7 +100,8 @@ namespace WebApi.Controllers
         /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = "Business")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePlaceDto dto)
+        [Consumes("multipart/form-data")] // ✅ عشان يقبل الصور
+        public async Task<IActionResult> Update(Guid id, [FromForm] UpdatePlaceDto dto) // ✅ FromForm
         {
             var businessId = await GetBusinessIdAsync();
             if (businessId == null)
@@ -134,11 +136,11 @@ namespace WebApi.Controllers
             try
             {
                 await _placeService.DeletePlaceAsync(id, businessId.Value);
-                return NoContent(); // 204
+                return NoContent();
             }
             catch (UnauthorizedAccessException)
             {
-                return Forbid(); // 403
+                return Forbid();
             }
             catch (Exception ex)
             {
@@ -147,10 +149,6 @@ namespace WebApi.Controllers
         }
 
         // ===================== Helper =====================
-
-        /// <summary>
-        /// بيجيب الـ UserId من الـ Token ثم يجيب الـ BusinessId من الداتابيز
-        /// </summary>
         private async Task<Guid?> GetBusinessIdAsync()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
