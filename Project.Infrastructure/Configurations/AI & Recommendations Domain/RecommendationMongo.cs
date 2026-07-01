@@ -21,15 +21,10 @@ namespace Project.Infrastructure.Configurations.AI___Recommendations_Domain
                 {
                     cm.AutoMap(); // بيعمل مابينج لكل الخصائص أوتوماتيك
 
-                    // 1. تظبيط الـ Primary Key (Guid)
-                    cm.MapIdProperty(x => x.Id)
-                      .SetIdGenerator(CombGuidGenerator.Instance);
+                    // تظبيط الـ Primary Key - تحويل ObjectId إلى String
+                    cm.MapIdProperty(x => x.Id);
 
-                    // 2. تحويل الـ Enum لـ String زي ما كنت عامل في الـ SQL
-                    cm.MapProperty(x => x.ItemType)
-                      .SetSerializer(new EnumSerializer<ItemType>(BsonType.String));
-
-                    // 3. تظبيط الـ Decimal عشان المنجو يفهمه كـ Decimal128 لأعلى دقة
+                    // تظبيط الـ Decimal عشان المنجو يفهمه كـ Decimal128 لأعلى دقة
                     cm.MapProperty(x => x.Score)
                       .SetSerializer(new DecimalSerializer(BsonType.Decimal128));
                 });

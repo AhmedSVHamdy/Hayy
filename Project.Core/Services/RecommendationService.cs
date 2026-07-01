@@ -36,9 +36,6 @@ namespace Project.Core.Services
             if (recommendation.Score < 0 || recommendation.Score > 1)
                 throw new ArgumentException("Score must be between 0 and 1");
 
-            recommendation.CreatedAt = DateTime.UtcNow;
-            recommendation.UpdatedAt = DateTime.UtcNow;
-
             await _recommendedItemRepository.CreateAsync(recommendation);
         }
 
@@ -47,11 +44,11 @@ namespace Project.Core.Services
         /// </summary>
         public async Task DeleteRecommendationAsync(Guid recommendationId)
         {
-            if (recommendationId == Guid.Empty)
+            if (string.IsNullOrEmpty(recommendationId.ToString()))
                 throw new ArgumentException("Recommendation ID is required");
 
             // تحتاج تضيف دالة Delete في الـ Repository إذا ما كانت موجودة
-            // await _recommendedItemRepository.DeleteAsync(recommendationId);
+            // await _recommendedItemRepository.DeleteAsync(recommendationId.ToString());
         }
     }
 }

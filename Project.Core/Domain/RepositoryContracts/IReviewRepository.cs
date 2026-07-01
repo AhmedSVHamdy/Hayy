@@ -13,11 +13,11 @@ namespace Project.Core.Domain.RepositoryContracts
         // 2. (القديمة) بتجيب كله - ممكن تخليها لو محتاجها في حتة تانية، بس الأساسي هيبقى الـ Paged
         Task<IEnumerable<Review>> GetReviewsByPlaceIdAsync(Guid placeId);
 
-        // ✅ 3. (الجديدة) دالة الجلب بالصفحات (Pagination)
+        // ✅ 3. (الجديدة) دالة الجلب بالصفحات (Pagination) - تاع المكان
         // دي اللي السيرفس كانت بتعيط عليها وبتقول مش لاقياها
         Task<List<Review>> GetReviewsPagedAsync(Guid placeId, int pageNumber, int pageSize);
 
-        // ✅ 4. (الجديدة) دالة عد الريفيوهات
+        // ✅ 4. (الجديدة) دالة عد الريفيوهات - تاع المكان
         // عشان نعرف نحسب عدد الصفحات الكلي (TotalPages)
         Task<int> GetCountByPlaceIdAsync(Guid placeId);
 
@@ -26,5 +26,11 @@ namespace Project.Core.Domain.RepositoryContracts
 
         Task<Review?> GetReviewByIdAsync(Guid id);
         Task UpdateAsync(Review review);
+        
+        // 🆕 جديد: جلب ريفيوهات اليوزر بالصفحات
+        Task<List<Review>> GetReviewsByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize);
+        
+        // 🆕 جديد: عد ريفيوهات اليوزر
+        Task<int> GetCountByUserIdAsync(Guid userId);
     }
 }

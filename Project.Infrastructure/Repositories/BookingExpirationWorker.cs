@@ -57,7 +57,7 @@ namespace Project.Core.Services
                         {
                             // 4. مبروك! دورك جه.. هنديله 2 دقيقة يدفع
                             nextInWaitlist.Status = BookingStatus.Pending;
-                            nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(2);
+                            nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(15);
                             nextInWaitlist.WaitlistPosition = null; // نطلعه من الطابور
 
                             // 5. نبعتله إشعار على الموبايل بـ SignalR (اليوزر نفسه)
@@ -79,7 +79,7 @@ namespace Project.Core.Services
                 }
 
                 // الكود هينام دقيقة ويرجع يشتغل تاني
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
             }
         }
     }

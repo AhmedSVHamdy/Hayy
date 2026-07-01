@@ -13,5 +13,6 @@ namespace Project.Core.Domain.RepositoryContracts
         // تعديل للباجينيشن: بنرجع الداتا + العدد الكلي
         Task<(IEnumerable<PlaceFollow> Items, int TotalCount)> GetFollowersByPlaceIdAsync(Guid placeId, int page, int size);
         Task<(IEnumerable<PlaceFollow> Items, int TotalCount)> GetFollowedPlacesByUserIdAsync(Guid userId, int page, int size);
+        Task<int> GetCountByUserIdAsync(Guid userId);
     }
 }
