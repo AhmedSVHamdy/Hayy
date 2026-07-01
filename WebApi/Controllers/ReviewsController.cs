@@ -77,6 +77,32 @@ namespace WebApi.Controllers
             // لو مفيش تقييمات ممكن ترجع ليستة فاضية عادي (Status 200)
             return Ok(reviews);
         }
+
+        // 🆕 الدالة الجديدة: عرض تقييمات اليوزر (GET api/reviews/user/{userId})
+        /// <summary>
+        /// Retrieves a paginated list of reviews created by a specific user.
+        /// </summary>
+        /// <remarks>This endpoint returns all reviews that were created by the specified user in a paginated format.</remarks>
+        /// <param name="userId">The unique identifier of the user whose reviews to retrieve.</param>
+        /// <param name="pageNumber">The page number of results to return. Must be greater than or equal to 1. Defaults to 1.</param>
+        /// <param name="pageSize">The number of reviews to include per page. Must be greater than 0. Defaults to 10.</param>
+        /// <returns>An <see cref="IActionResult"/> containing a paginated list of reviews created by the user.</returns>
+        [HttpGet("user/{userId}")]
+        [Authorize]
+        // /api/reviews/user/{userId}? pageNumber = 1 & pageSize = 10
+        public async Task<IActionResult> GetReviewsByUser(Guid userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var reviews = await _reviewService.GetReviewsByUserIdPagedAsync(userId, pageNumber, pageSize);
+                return Ok(reviews);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = "حدث خطأ غير متوقع" });
+            }
+        }
+
         /// <summary>
         /// Updates an existing review with the specified data for the authenticated user.
         /// </summary>

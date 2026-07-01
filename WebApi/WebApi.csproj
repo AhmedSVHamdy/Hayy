@@ -9,6 +9,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
+		<PackageReference Include="MailKit" Version="4.17.0" />
 
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.6" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
@@ -26,6 +27,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Project.Core\Project.Core.csproj" />
+		
 		<ProjectReference Include="..\Project.Infrastructure\Project.Infrastructure.csproj" />
 	</ItemGroup>
 </Project>

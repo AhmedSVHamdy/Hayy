@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
@@ -16,11 +17,13 @@ namespace WebApi.Controllers
     {
         private readonly IEventBookingService _bookingService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public EventBookingsController(IEventBookingService bookingService, IUnitOfWork unitOfWork)
+        public EventBookingsController(IEventBookingService bookingService, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _bookingService = bookingService;
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
         /// <summary>
         /// Creates a new booking for the authenticated user based on the provided booking details.
@@ -58,7 +61,7 @@ namespace WebApi.Controllers
 
                 return Ok(new
                 {
-                    Message = "تم الحجز بنجاح. أمامك 15 دقيقة لإتمام الدفع وإلا سيتم إلغاء الحجز.",
+                    Message = "تم الحجز بنجاح. أمامك 2 دقيقة لإتمام الدفع وإلا سيتم إلغاء الحجز.",
                     Data = result
                 });
             }
@@ -166,6 +169,28 @@ namespace WebApi.Controllers
                 return NotFound("الـ QR Code غير موجود");
 
             return Ok(new { qrCode = booking.QrCodeBase64 });
+        }
+        /// <summary>
+        /// Retrieves the current status of a specific booking by its ID.
+        /// Used by Flutter to poll waitlist status changes.
+        /// </summary>
+        [HttpGet("status/{bookingId}")]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> GetBookingStatus(Guid bookingId)
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdString, out Guid userId))
+                return Unauthorized();
+
+            var booking = await _unitOfWork.EventBookings.GetByIdAsync(bookingId);
+
+            if (booking == null)
+                return NotFound("الحجز غير موجود");
+
+            if (booking.UserId != userId)
+                return Unauthorized("غير مصرح لك");
+
+            return Ok(_mapper.Map<BookingResponseDto>(booking));
         }
     }
 }

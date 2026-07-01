@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Humanizer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Project.Core.Domain.Entities;
+using Project.Core.Helpers;
 using Project.Core.ServiceContracts;
+using Project.Core.Services;
 using System.Security.Claims;
 using static Project.Core.DTO.CeratePlaceFollow;
 
@@ -89,18 +92,34 @@ namespace WebApi.Controllers
         /// <param name="pageSize">The number of items to include on each page. Must be greater than 0. The default value is 10.</param>
         /// <returns>An <see cref="IActionResult"/> containing a paginated list of followed places for the authenticated user.
         /// Returns an unauthorized response if the user is not authenticated.</returns>
-        [HttpGet("user/follows")]
+        [HttpGet("user/follows/{userId}")]
         [Authorize(Roles = "User")]
-        public async Task<IActionResult> GetFollowedPlacesByUser([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetFollowedPlacesByUser(Guid userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(userIdString, out Guid userId))
+            var currentUserId = User.GetUserId();
+            if (currentUserId == Guid.Empty)
             {
-                return Unauthorized(new { Message = "غير مصرح لك، برجاء تسجيل الدخول." });
+                return Unauthorized("Token is invalid or missing User ID claim.");
             }
 
-            var result = await _placeFollowService.GetFollowedPlacesByUserIdPagedAsync(userId, pageNumber, pageSize);
-            return Ok(result);
+            try
+            {
+                // بنباصي الـ userId للسيرفس عشان نتأكد من الصلاحية
+                var result = await _placeFollowService.GetFollowedPlacesByUserIdPagedAsync(userId, pageNumber, pageSize);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message }); // 404
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message }); // 403
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message }); // 400
+            }
         }
     }
 }

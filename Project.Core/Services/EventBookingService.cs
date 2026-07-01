@@ -66,7 +66,10 @@ namespace Project.Core.Services
                         if (@event == null || @event.Status != EventStatus.Active)
                             throw new ArgumentException("هذا الحدث غير متاح حالياً.");
 
-                        int currentValidBookings = await _unitOfWork.EventBookings.GetValidTicketsCountAsync(bookingDto.EventId);
+                        // 🔥 حساب صحيح: Pending + Confirmed (كلهم محجوزة فعلاً أو قيد الدفع)
+                        int confirmedTickets = await _unitOfWork.EventBookings.GetConfirmedTicketsCountAsync(bookingDto.EventId);
+                        int pendingTickets = await _unitOfWork.EventBookings.GetPendingTicketsCountAsync(bookingDto.EventId);
+                        int totalReserved = confirmedTickets + pendingTickets; // 🔥 المجموع
 
                         var booking = new EventBooking
                         {
@@ -77,10 +80,11 @@ namespace Project.Core.Services
                             PaymentMethod = PaymentMethod.CreditCard
                         };
 
-                        if (currentValidBookings + bookingDto.TicketQuantity <= @event.Capacity)
+                        // ✅ الشرط: هل الـ Pending + Confirmed + الحجز الجديد ≤ السعة
+                        if (totalReserved + bookingDto.TicketQuantity <= @event.Capacity)
                         {
                             booking.Status = BookingStatus.Pending;
-                            booking.PaymentDeadline = DateTime.UtcNow.AddMinutes(15);
+                            booking.PaymentDeadline = DateTime.UtcNow.AddMinutes(2);
                         }
                         else if (@event.IsWaitlistEnabled)
                         {
@@ -115,7 +119,7 @@ namespace Project.Core.Services
                         {
                             BackgroundJob.Schedule<IEventBookingService>(
                                 service => service.CancelUnpaidBookingAsync(booking.Id),
-                                TimeSpan.FromMinutes(15));
+                                TimeSpan.FromMinutes(2));
                         }
 
                         result = _mapper.Map<BookingResponseDto>(booking);
@@ -171,7 +175,7 @@ namespace Project.Core.Services
             booking.PaidAmount = booking.TicketQuantity * @event.Price;
 
             booking.PaymentDate = DateTime.UtcNow;
-            booking.PaymentDeadline = null; // بنوقف عداد الـ 15 دقيقة لأنه خلاص دفع
+            booking.PaymentDeadline = null; // بنوقف عداد الـ 2 دقيقة لأنه خلاص دفع
 
 
             // توليد الـ QR Code
@@ -290,15 +294,15 @@ namespace Project.Core.Services
 
                 if (nextInWaitlist != null)
                 {
-                    // نرقيه ونخليه Pending ونديله 15 دقيقة للدفع
+                    // نرقيه ونخليه Pending ونديله 2 دقيقة للدفع
                     nextInWaitlist.Status = BookingStatus.Pending;
                     nextInWaitlist.WaitlistPosition = null;
-                    nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(15);
+                    nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(2);
 
-                    // نقول لـ Hangfire يصحى لليوزر ده كمان 15 دقيقة
+                    // نقول لـ Hangfire يصحى لليوزر ده كمان 2 دقيقة
                     BackgroundJob.Schedule<IEventBookingService>(
                         service => service.CancelUnpaidBookingAsync(nextInWaitlist.Id),
-                        TimeSpan.FromMinutes(15)
+                        TimeSpan.FromMinutes(2)
                     );
 
                     // ==========================================
@@ -309,7 +313,7 @@ namespace Project.Core.Services
                     {
                         string subject = "دورك جه! تذكرتك متاحة الآن 🎟️";
                         string eventName = nextInWaitlist.Event?.Title ?? "الحدث";
-                        string body = $"أهلاً، لقد حان دورك في قائمة الانتظار لحدث '{eventName}'. أمامك 15 دقيقة فقط لإتمام الدفع وإلا سيتم تمرير التذكرة للشخص التالي.";
+                        string body = $"أهلاً، لقد حان دورك في قائمة الانتظار لحدث '{eventName}'. أمامك 2 دقيقة فقط لإتمام الدفع وإلا سيتم تمرير التذكرة للشخص التالي.";
 
                         // استخدمنا الـ Fire-and-forget أو await عادي
                         await _emailService.SendEmailAsync(nextInWaitlist.User.Email, subject, body);

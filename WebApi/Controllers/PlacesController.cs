@@ -59,7 +59,7 @@ namespace WebApi.Controllers
         /// جيب كل الأماكن — للمستخدمين العاديين فقط
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "User")]
+        [Authorize] 
         public async Task<IActionResult> GetAll()
         {
             var places = await _placeService.GetAllPlacesAsync();

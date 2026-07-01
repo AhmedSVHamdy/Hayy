@@ -53,9 +53,12 @@ namespace Project.Infrastructure.Repositories
         {
             return await _context.BusinessPosts
                 .Where(p => p.PlaceId == placeId)
-                .OrderByDescending(p => p.CreatedAt) // الأحدث يظهر الأول
-                .Skip((pageNumber - 1) * pageSize)   // تفويت الصفحات السابقة
-                .Take(pageSize)                      // جلب العدد المطلوب
+                .Include(p => p.Place)        // 👈 عشان الـ PlaceName والـ PlaceImage يظهروا
+                .Include(p => p.PostLikes)    // 👈 عشان نعد اللايكات
+                .Include(p => p.PostComments) // 👈 عشان نعد الكومنتات
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
         }
         public async Task UpdateAsync(BusinessPost post)

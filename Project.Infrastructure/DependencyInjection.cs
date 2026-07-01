@@ -61,11 +61,8 @@ namespace Project.Infrastructure
                 {
                     cm.AutoMap();
 
-                    // تظبيط الـ ID
-                    cm.MapIdProperty(x => x.Id).SetIdGenerator(CombGuidGenerator.Instance);
-
-                    // تحويل الـ Enum لـ String عشان يتقرأ صح في المنجو
-                    cm.MapProperty(x => x.ItemType).SetSerializer(new EnumSerializer<ItemType>(BsonType.String));
+                    // تظبيط الـ ID - تحويل ObjectId إلى String
+                    cm.MapIdProperty(x => x.Id);
 
                     // تظبيط الـ Decimal لأعلى دقة
                     cm.MapProperty(x => x.Score).SetSerializer(new DecimalSerializer(BsonType.Decimal128));
@@ -127,7 +124,7 @@ namespace Project.Infrastructure
             // ====================================================
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            
+
 
             services.AddScoped<IUserLogRepository, UserLogRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
@@ -150,6 +147,7 @@ namespace Project.Infrastructure
             services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
             services.AddScoped<IEventPaymentService, EventPaymentService>();
+            services.AddScoped<IRecommendedItemRepository, RecommendedItemRepository>(); // 👈 استخدم الموجود
            
 
 

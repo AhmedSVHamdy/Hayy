@@ -1,16 +1,20 @@
-﻿using Project.Core.Enums;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using Project.Core.Enums;
 
 namespace Project.Core.Domain.Entities
 {
     public class RecommendedItem
     {
-        public Guid Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
+
         public Guid UserId { get; set; }
-        public ItemType ItemType { get; set; }
-        public Guid ItemId { get; set; }
-        public decimal Score { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+
+        // المكان المقترح
+        public Guid PlaceId { get; set; }
+
+        public decimal Score { get; set; }      // درجة التطابق (0-100)
     }
 }
-

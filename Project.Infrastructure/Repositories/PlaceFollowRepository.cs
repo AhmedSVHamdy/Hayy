@@ -50,5 +50,10 @@ namespace Project.Infrastructure.Repositories
             var items = await query.Skip((page - 1) * size).Take(size).ToListAsync();
             return (items, totalCount);
         }
+        public async Task<int> GetCountByUserIdAsync(Guid userId)
+        {
+            return await _context.PlaceFollows
+                .CountAsync(f => f.UserId == userId);
+        }
     }
 }

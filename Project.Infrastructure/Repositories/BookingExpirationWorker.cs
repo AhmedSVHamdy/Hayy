@@ -55,7 +55,7 @@ namespace Project.Core.Services
 
                         if (nextInWaitlist != null)
                         {
-                            // 4. مبروك! دورك جه.. هنديله 15 دقيقة يدفع
+                            // 4. مبروك! دورك جه.. هنديله 2 دقيقة يدفع
                             nextInWaitlist.Status = BookingStatus.Pending;
                             nextInWaitlist.PaymentDeadline = DateTime.UtcNow.AddMinutes(15);
                             nextInWaitlist.WaitlistPosition = null; // نطلعه من الطابور
@@ -63,7 +63,7 @@ namespace Project.Core.Services
                             // 5. نبعتله إشعار على الموبايل بـ SignalR (اليوزر نفسه)
                             await notifier.SendNotificationToUserWaitlist(
                                 nextInWaitlist.UserId.ToString(),
-                                "مبروك! تذكرتك من قائمة الانتظار أصبحت متاحة. أمامك 15 دقيقة لإتمام الدفع."
+                                "مبروك! تذكرتك من قائمة الانتظار أصبحت متاحة. أمامك 2 دقيقة لإتمام الدفع."
                             );
                         }
                     }
@@ -79,7 +79,7 @@ namespace Project.Core.Services
                 }
 
                 // الكود هينام دقيقة ويرجع يشتغل تاني
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
             }
         }
     }
