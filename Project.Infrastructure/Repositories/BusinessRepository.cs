@@ -15,6 +15,17 @@ namespace Project.Infrastructure.Repositories
             _context = context;
         }
 
+
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task AddBusinessAnalyticAsync(BusinessAnalytic analytic)
+        {
+            await _context.BusinessAnalytics.AddAsync(analytic);
+        }
+
         // =========================================================
         //  إدارة البيزنس
         // =========================================================
@@ -29,6 +40,7 @@ namespace Project.Infrastructure.Repositories
         {
             return await _context.Businesses
                 .Include(b => b.User)
+                .Include(b => b.BusinessAnalytics)
                 .Include(b => b.Verifications)
                 .FirstOrDefaultAsync(b => b.Id == id);
         }
@@ -37,8 +49,15 @@ namespace Project.Infrastructure.Repositories
         {
             return await _context.Businesses
                 .Include(b => b.Verifications)
-                // ✅ الإضافة: بنجيب الاشتراكات عشان نشيك عليها في الـ Login
+                .Include(b => b.BusinessAnalytics)
+
+                // ✅ جلب الاشتراكات ومعها الخطة المرتبطة بها لمعرفة السعر وصلاحية الاشتراك
                 .Include(b => b.Subscriptions)
+                    .ThenInclude(s => s.Plan)
+
+                // 🚀🚀 التعديل الأهم: 
+                // تم حذف الـ Includes الخاصة بالـ Places والـ Reviews والـ Follows من هنا!
+                // الدالة دي بقت سريعة جداً وهتعتمد على قراءة البيانات الجاهزة من جدول الـ BusinessAnalytics
                 .FirstOrDefaultAsync(b => b.UserId == userId);
         }
 
@@ -82,6 +101,19 @@ namespace Project.Infrastructure.Repositories
                 .Include(b => b.Verifications)
                 .Where(b => b.VerificationStatus == VerificationStatus.Pending)
                 .OrderByDescending(b => b.CreatedAt)
+                .ToListAsync();
+        }
+
+        // =========================================================
+        //  دوال المزامنة والسكربتات 
+        // =========================================================
+        public async Task<List<Business>> GetAllBusinessesWithDetailsForSyncAsync()
+        {
+            return await _context.Businesses
+                .Include(b => b.BusinessAnalytics)
+                .Include(b => b.Subscriptions).ThenInclude(s => s.Plan)
+                .Include(b => b.Places).ThenInclude(p => p.Reviews)
+                .Include(b => b.Places).ThenInclude(p => p.PlaceFollows)
                 .ToListAsync();
         }
     }
