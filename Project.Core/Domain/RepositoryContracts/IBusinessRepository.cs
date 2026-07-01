@@ -8,7 +8,8 @@ namespace Project.Core.Domain.RepositoryContracts
     public interface IBusinessRepository
     {
 
-
+        Task SaveChangesAsync();
+        Task AddBusinessAnalyticAsync(BusinessAnalytic analytic);
         Task AddBusinessAsync(Business business); // وحدنا الاسم ليكون AddBusinessAsync
         Task<Business?> GetBusinessByIdAsync(Guid id);
         Task<Business?> GetBusinessByUserIdAsync(Guid userId); // 👈 هذا هو سبب الخطأ، لازم يكون موجود هنا
@@ -22,5 +23,6 @@ namespace Project.Core.Domain.RepositoryContracts
         // 3. لوحة تحكم الأدمن
         Task<List<Business>> GetPendingVerificationsAsync();
 
+        Task<List<Business>> GetAllBusinessesWithDetailsForSyncAsync();
     }
 }

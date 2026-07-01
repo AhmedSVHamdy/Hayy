@@ -6,7 +6,8 @@ using Project.Core.Enums;
 using Project.Core.ServiceContracts;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 using static Project.Core.DTO.CeratePlaceFollow;
 
 namespace Project.Core.Services
@@ -14,11 +15,12 @@ namespace Project.Core.Services
     public class PlaceFollowService : IPlaceFollowService
     {
         private readonly IPlaceFollowRepository _placeFollowRepository; // مسؤول الـ SQL
-        private readonly IUserLogService _userLogService;       // مسؤول الـ MongoDB
-        private readonly IMapper _mapper;                       // مسؤول التحويل
-        private readonly INotifier _notifier;                   // SignalR
-        private readonly IPlaceRepository _placeRepo;           // Place (عشان نتأكد من المكان ونجيب الكاتيجوري)
+        private readonly IUserLogService _userLogService;               // مسؤول الـ MongoDB
+        private readonly IMapper _mapper;                               // مسؤول التحويل
+        private readonly INotifier _notifier;                           // SignalR
+        private readonly IPlaceRepository _placeRepo;                   // Place (عشان نتأكد من المكان ونجيب الكاتيجوري)
         private readonly IUserInterestRepository _interestRepository;
+        private readonly IBusinessRepository _businessRepo;             // مسؤول الـ Analytics
 
         public PlaceFollowService(
             IPlaceFollowRepository placeFollowRepository,
@@ -26,7 +28,8 @@ namespace Project.Core.Services
             IMapper mapper,
             INotifier notifier,
             IPlaceRepository placeRepo,
-            IUserInterestRepository interestRepository)
+            IUserInterestRepository interestRepository,
+            IBusinessRepository businessRepo)
         {
             _placeFollowRepository = placeFollowRepository;
             _userLogService = userLogService;
@@ -34,12 +37,12 @@ namespace Project.Core.Services
             _notifier = notifier;
             _placeRepo = placeRepo;
             _interestRepository = interestRepository;
+            _businessRepo = businessRepo;
         }
 
         public async Task<bool> ToggleFollowAsync(Guid userId, TogglePlaceFollowDto dto)
         {
             // 🛑 Business Validation 1: هل المكان موجود؟
-            // استخدم الميثود اللي بتجيب المكان عندك (ممكن تكون GetByIdAsync أو GetByIdWithDetailsAsync)
             var place = await _placeRepo.GetByIdWithDetailsAsync(dto.PlaceId);
             if (place == null)
             {
@@ -52,8 +55,11 @@ namespace Project.Core.Services
             if (existingFollow != null)
             {
                 // ❌ إلغاء المتابعة (Unfollow)
-                // (مطلوب منك تتأكد إن الريبوزيتوري فيه دالة RemoveAsync أو بتعملها Remove و Save جواها)
                 await _placeFollowRepository.RemoveAsync(existingFollow);
+
+                // ✅ تحديث Analytics: تقليل عدد المتابعين بـ 1
+                await UpdateBusinessFollowersCountAsync(place.BusinessId, -1);
+
                 return false;
             }
             else
@@ -70,6 +76,9 @@ namespace Project.Core.Services
                 // 1️⃣ SQL: الحفظ في قاعدة البيانات الأساسية
                 await _placeFollowRepository.AddAsync(newFollow);
 
+                // ✅ تحديث Analytics: زيادة عدد المتابعين بـ 1
+                await UpdateBusinessFollowersCountAsync(place.BusinessId, 1);
+
                 // 2️⃣ SignalR: تنبيه صاحب المطعم فوراً 🔔
                 string groupName = $"Management_{dto.PlaceId}";
                 await _notifier.SendNotificationToGroup(
@@ -77,7 +86,7 @@ namespace Project.Core.Services
                     "يوجد مستخدم جديد قام بمتابعة مكانك! 👤"
                 );
 
-               
+
                 var userInterests = await _interestRepository.GetUserInterestsByUserIdAsync(userId);
                 Guid? userTopCategoryId = userInterests
                     .OrderByDescending(i => i.InterestScore)
@@ -87,15 +96,16 @@ namespace Project.Core.Services
                     .Where(i => i.TagId.HasValue)
                     .Select(i => i.TagId.Value)
                     .ToList();
+
                 // 3️⃣ MongoDB: تسجيل الحدث للـ AI والتحليلات 🧠
                 var logDto = new CreateUserLogDto
                 {
                     UserId = userId,
-                    ActionType = ActionType.Follow,   // نوع العملية: متابعة (ضيفها في الـ Enum)
-                    TargetType = TargetType.Place,    // الهدف: مكان
+                    ActionType = ActionType.Follow,
+                    TargetType = TargetType.Place,
                     TargetId = dto.PlaceId,
-                    CategoryId = place.CategoryId,    // ✅ جبنا الـ CategoryId من المكان اللي بحثنا عنه فوق
-                    Details = "قام بمتابعة المكان",   // نص يوضح الحدث
+                    CategoryId = place.CategoryId,
+                    Details = "قام بمتابعة المكان",
                     TagId = place.PlaceTags?.Select(t => t.TagId).ToList() ?? new List<Guid>(),
                     UserTopInterestCategoryId = userTopCategoryId,
                     UserInterestTagIds = userTagIds
@@ -130,6 +140,45 @@ namespace Project.Core.Services
 
             var dtos = _mapper.Map<List<PlaceFollowResponseDto>>(items);
             return new PagedResult<PlaceFollowResponseDto>(dtos, totalCount, pageNumber, pageSize);
+        }
+
+        // =========================================================
+        // ✅ 3. دالة مساعدة (Helper Method) لتحديث الإحصائيات بأمان 
+        // =========================================================
+        private async Task UpdateBusinessFollowersCountAsync(Guid businessId, int amountChange)
+        {
+            // نجلب البيزنس مع الـ Analytics الخاصة به
+            var business = await _businessRepo.GetBusinessByIdAsync(businessId);
+
+            if (business != null)
+            {
+                if (business.BusinessAnalytics != null)
+                {
+                    // لو السجل موجود، بنزود أو ننقص حسب القيمة (amountChange)
+                    // نستخدم Math.Max عشان العدد مستحيل يقل عن الصفر بالغلط
+                    business.BusinessAnalytics.TotalFollowers = Math.Max(0, business.BusinessAnalytics.TotalFollowers + amountChange);
+                    business.BusinessAnalytics.LastUpdated = DateTime.UtcNow;
+                }
+                else if (amountChange > 0)
+                {
+                    // لو السجل مش موجود أصلاً (نادرة الحدوث بسبب المزامنة)، نعمله من الصفر
+                    var newAnalytics = new BusinessAnalytic
+                    {
+                        Id = Guid.NewGuid(),
+                        BusinessId = businessId,
+                        TotalFollowers = 1,
+                        TotalReviews = 0,
+                        TotalViews = 0,
+                        AvgRating = 0,
+                        MonthlyRevenue = 0,
+                        LastUpdated = DateTime.UtcNow
+                    };
+                    await _businessRepo.AddBusinessAnalyticAsync(newAnalytics);
+                }
+
+                // حفظ التغييرات في قاعدة البيانات
+                await _businessRepo.SaveChangesAsync();
+            }
         }
     }
 }

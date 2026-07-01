@@ -4,50 +4,30 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Project.Core.DTO;
 using Project.Core.ServiceContracts;
+using System;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Project.Web.Controllers
 {
     /// <summary>
     /// Controller for business-specific operations including onboarding and profile management.
     /// </summary>
-    /// <remarks>
-    /// This controller handles operations exclusive to business users, primarily the business
-    /// onboarding process where businesses submit their details for admin verification.
-    /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
     public class BusinessController : ControllerBase
     {
         private readonly IBusinessService _businessService;
         private readonly IValidator<BusinessOnboardingDTO> _onboardingValidator;
+        // 💡 يفضل حقن ILogger هنا مستقبلاً لتسجيل الأخطاء
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="BusinessController"/> class.
-        /// </summary>
-        /// <param name="businessService">The service for handling business operations.</param>
-        /// <param name="onboardingValidator">The validator for business onboarding data.</param>
         public BusinessController(IBusinessService businessService, IValidator<BusinessOnboardingDTO> onboardingValidator)
         {
             _businessService = businessService;
             _onboardingValidator = onboardingValidator;
         }
 
-        /// <summary>
-        /// Submits business onboarding details for admin verification.
-        /// </summary>
-        /// <param name="model">The business onboarding data including documents and images.</param>
-        /// <returns>A success response if the submission is valid and processed.</returns>
-        /// <response code="200">Business details submitted successfully and awaiting admin review.</response>
-        /// <response code="400">If validation fails, required documents are missing, or business already exists.</response>
-        /// <response code="401">If the user is not authenticated or lacks Business role.</response>
-        /// <response code="500">If an internal server error occurs during submission.</response>
-        /// <remarks>
-        /// This endpoint requires the user to have the "Business" role. The submitted data will be
-        /// validated and stored for admin review. Required documents include business registration
-        /// certificates and identification documents. The business account will be marked as
-        /// "PendingVerification" until an admin approves or rejects it.
-        /// </remarks>
         [HttpPost("onboarding")]
         [Authorize(Roles = "Business")]
         [Consumes("multipart/form-data")]
@@ -57,11 +37,11 @@ namespace Project.Web.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> SubmitOnboarding([FromForm] BusinessOnboardingDTO model)
         {
+            // 1. Controller-Level Validation
             ValidationResult validationResult = await _onboardingValidator.ValidateAsync(model);
 
             if (!validationResult.IsValid)
             {
-                // توحيد شكل الـ Errors عشان الفرونت إند ميتلخبطش
                 var errors = validationResult.Errors
                     .GroupBy(e => e.PropertyName)
                     .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
@@ -72,9 +52,12 @@ namespace Project.Web.Controllers
             try
             {
                 var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null) return Unauthorized();
 
-                var userId = Guid.Parse(userIdClaim);
+                // ✅ الحماية من الـ FormatException باستخدام TryParse
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
+                {
+                    return Unauthorized(new { Success = false, Message = "Invalid or missing user token." });
+                }
 
                 await _businessService.SubmitBusinessDetailsAsync(userId, model);
 
@@ -84,18 +67,185 @@ namespace Project.Web.Controllers
                     Message = "Details submitted successfully. Your account is under review."
                 });
             }
-            catch (ArgumentException ex) // 👈 ضفنا دي عشان مشاكل الصور الناقصة
+            // ✅ التقاط الـ ValidationException القادم من الـ Service (إن وُجد)
+            catch (ValidationException ex)
+            {
+                var errors = ex.Errors
+                    .GroupBy(e => e.PropertyName)
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+                return BadRequest(new { Success = false, Message = "Validation Failed", Errors = errors });
+            }
+            catch (ArgumentException ex)
             {
                 return BadRequest(new { Success = false, Message = ex.Message });
             }
-            catch (InvalidOperationException ex) // 👈 عشان لو عنده بيزنس قبل كدا
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { Success = false, Message = ex.Message });
             }
             catch (Exception ex)
             {
-                // Log the error here (ex)
-                return StatusCode(500, new { Success = false, Message = "An internal error occurred.", Details = ex.Message });
+                // TODO: Log the error using ILogger here -> _logger.LogError(ex, "Error submitting onboarding");
+
+                // ✅ إزالة Details = ex.Message لحماية الـ API من تسريب البيانات
+                return StatusCode(500, new { Success = false, Message = "An internal server error occurred. Please try again later." });
+            }
+        }
+
+
+        /// <summary>
+        /// Gets the profile details and verification status of the current logged-in business.
+        /// </summary>
+        [HttpGet("profile")]
+        [Authorize(Roles = "Business")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BusinessProfileDTO))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetProfile()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
+                {
+                    return Unauthorized(new { Success = false, Message = "Invalid token." });
+                }
+
+                var profile = await _businessService.GetBusinessProfileByUserIdAsync(userId);
+                return Ok(new { Success = true, Data = profile });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while fetching profile." });
+            }
+        }
+
+        /// <summary>
+        /// Updates the profile information (Brand name, Legal name, and optionally Logo).
+        /// </summary>
+        [HttpPut("profile")]
+        [Authorize(Roles = "Business")]
+        [Consumes("multipart/form-data")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateProfile([FromForm] UpdateBusinessProfileDTO model)
+        {
+            // التحقق الأساسي من القيم النصية
+            if (string.IsNullOrWhiteSpace(model.BrandName) || string.IsNullOrWhiteSpace(model.LegalName))
+            {
+                return BadRequest(new { Success = false, Message = "Brand Name and Legal Name are required." });
+            }
+
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
+                {
+                    return Unauthorized(new { Success = false, Message = "Invalid token." });
+                }
+
+                await _businessService.UpdateBusinessProfileAsync(userId, model);
+
+                return Ok(new { Success = true, Message = "Profile updated successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while updating profile." });
+            }
+        }
+        /// <summary>
+        /// Gets the analytics/dashboard data for the current logged-in business.
+        /// </summary>
+        [HttpGet("analytics")]
+        [Authorize(Roles = "Business")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BusinessAnalyticDTO))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetAnalytics()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
+                {
+                    return Unauthorized(new { Success = false, Message = "Invalid token." });
+                }
+
+                var analytics = await _businessService.GetMyAnalyticsAsync(userId);
+
+                return Ok(new { Success = true, Data = analytics });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while fetching analytics." });
+            }
+        }
+
+        /// <summary>
+        /// Gets the email address of the user associated with a specific business ID.
+        /// Only accessible by Admins for security/privacy.
+        /// </summary>
+        /// <param name="businessId">The unique identifier of the business.</param>
+        [HttpGet("{businessId:guid}/user-email")]
+        [Authorize(Roles = "Admin,Business")] // 🔒 تأمين الـ Endpoint للأدمن فقط لحماية الخصوصية
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BusinessUserEmailDTO))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetBusinessUserEmail([FromRoute] Guid businessId)
+        {
+            if (businessId == Guid.Empty)
+            {
+                return BadRequest(new { Success = false, Message = "Invalid Business ID." });
+            }
+
+            try
+            {
+                var result = await _businessService.GetBusinessUserEmailAsync(businessId);
+                return Ok(new { Success = true, Data = result });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Success = false, Message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Success = false, Message = "An error occurred while fetching the email." });
+            }
+        }
+
+        /// <summary>
+        /// One-time script to sync and store all existing business analytics into the table.
+        /// Accessible only by Admin.
+        /// </summary>
+        [HttpPost("sync-analytics")]
+        [Authorize(Roles = "Admin")]
+        private async Task<IActionResult> SyncAnalytics()
+        {
+            try
+            {
+                await _businessService.SyncAllBusinessesAnalyticsAsync();
+                return Ok(new { Success = true, Message = "All existing business analytics have been calculated and stored successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = ex.Message });
             }
         }
     }

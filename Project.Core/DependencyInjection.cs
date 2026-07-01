@@ -88,7 +88,7 @@ namespace Project.Core
             services.AddAutoMapper(cfg => cfg.AddProfile<SubscriptionPlanProfile>());
 
             // Services
-            
+
 
             return services;
         }

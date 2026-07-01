@@ -17,5 +17,14 @@ namespace Project.Core.ServiceContracts
         // 3. دالة مراجعة الأدمن (Approve / Reject)
         Task ReviewBusinessAsync(Guid businessId, ReviewBusinessDTO reviewDto, Guid adminId);
 
+        Task<BusinessProfileDTO> GetBusinessProfileByUserIdAsync(Guid userId);
+        Task UpdateBusinessProfileAsync(Guid userId, UpdateBusinessProfileDTO model);
+
+        Task<BusinessAnalyticDTO> GetMyAnalyticsAsync(Guid userId);
+
+        Task SyncAllBusinessesAnalyticsAsync();
+
+        Task<BusinessUserEmailDTO> GetBusinessUserEmailAsync(Guid businessId);
+
     }
 }
