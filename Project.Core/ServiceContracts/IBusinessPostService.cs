@@ -22,5 +22,8 @@ namespace Project.Core.ServiceContracts
 
         // 👈 جديد: الرد على تعليق
         Task<CommentResponseDto> ReplyToCommentAsync(ReplyCommentDto dto);
+
+        // 🆕 جديد: جيب بوست واحد بـ ID
+        Task<PostResponseDto?> GetPostByIdAsync(Guid postId);
     }
 }

@@ -54,6 +54,31 @@ namespace WebApi.Controllers
             var offers = await _offerService.GetOffersByPlaceIdAsync(placeId);
             return Ok(offers);
         }
+
+        // 🌍 جديد: جيب عرض واحد بـ ID
+        /// <summary>
+        /// Retrieves a specific offer by its unique identifier.
+        /// </summary>
+        /// <param name="offerId">The unique identifier of the offer to retrieve.</param>
+        /// <returns>An <see cref="IActionResult"/> containing the offer details if found; otherwise, a 404 Not Found response.</returns>
+        [HttpGet("offer/{offerId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetOfferById(Guid offerId)
+        {
+            try
+            {
+                var offer = await _offerService.GetOfferByIdAsync(offerId);
+
+                if (offer == null)
+                    return NotFound(new { message = "العرض غير موجود" });
+
+                return Ok(offer);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         // 🔒 التعديل - لأصحاب الأماكن بس
         /// <summary>
         /// Updates an existing offer with the specified identifier using the provided data.

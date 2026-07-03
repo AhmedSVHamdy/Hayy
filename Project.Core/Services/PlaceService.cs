@@ -17,19 +17,22 @@ namespace Project.Core.Services
         private readonly IGenericRepository<Tag> _tagRepo;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IImageService _imageService; // ✅ ضيفنا ده
 
         public PlaceService(
             IPlaceRepository placeRepo,
             ICategoryRepository categoryRepo,
             IGenericRepository<Tag> tagRepo,
             IUnitOfWork unitOfWork,
-            IMapper mapper)
+            IMapper mapper,
+            IImageService imageService) // ✅ ضيفنا ده
         {
             _placeRepo = placeRepo;
             _categoryRepo = categoryRepo;
             _tagRepo = tagRepo;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _imageService = imageService; // ✅ ضيفنا ده
         }
 
         public async Task<PlaceResponseDto> CreatePlaceAsync(CreatePlaceDto dto)
@@ -44,9 +47,13 @@ namespace Project.Core.Services
             place.Id = Guid.NewGuid();
             place.IsActive = true;
 
+            // ✅ 3. رفع الصورة لو موجودة
+            if (dto.CoverImage != null)
+                place.CoverImage = await _imageService.UploadImageAsync(dto.CoverImage);
+
             await _placeRepo.AddAsync(place);
 
-            // 3. إضافة الوسوم (Tags Logic)
+            // 4. إضافة الوسوم (Tags Logic)
             if (dto.TagIds != null && dto.TagIds.Any())
             {
                 foreach (var tagId in dto.TagIds)
@@ -63,10 +70,10 @@ namespace Project.Core.Services
                 }
             }
 
-            // 4. الحفظ الفعلي في الداتابيز
+            // 5. الحفظ الفعلي في الداتابيز
             await _unitOfWork.SaveChangesAsync();
 
-            // 5. الإرجاع
+            // 6. الإرجاع
             var response = _mapper.Map<PlaceResponseDto>(place);
             response.CategoryName = category.Name;
 
@@ -98,8 +105,6 @@ namespace Project.Core.Services
             return _mapper.Map<List<PlaceResponseDto>>(places);
         }
 
-        // ===================== الميثودات الجديدة =====================
-
         public async Task<IEnumerable<PlaceResponseDto>> GetPlacesByBusinessAsync(Guid businessId)
         {
             var places = await _placeRepo.GetByBusinessIdAsync(businessId);
@@ -113,13 +118,10 @@ namespace Project.Core.Services
             if (place == null)
                 throw new Exception("المكان غير موجود");
 
-            // تأكد إن البيزنس ده صاحب المكان
             if (place.BusinessId != businessId)
                 throw new UnauthorizedAccessException("مش مسموح تمسح مكان مش بتاعك");
 
-            // Soft Delete أفضل من الحذف الفعلي
             place.IsActive = false;
-
             _placeRepo.Update(place);
             await _unitOfWork.SaveChangesAsync();
 
@@ -133,16 +135,17 @@ namespace Project.Core.Services
             if (place == null)
                 throw new Exception("المكان غير موجود");
 
-            // تأكد إن البيزنس ده صاحب المكان
             if (place.BusinessId != businessId)
                 throw new UnauthorizedAccessException("مش مسموح تعدل مكان مش بتاعك");
 
-            // عدّل بس الحاجات اللي بعتها (Partial Update)
             if (dto.Name != null) place.Name = dto.Name;
             if (dto.Description != null) place.Description = dto.Description;
             if (dto.Latitude.HasValue) place.Latitude = (decimal)dto.Latitude.Value;
             if (dto.Longitude.HasValue) place.Longitude = (decimal)dto.Longitude.Value;
-            if (dto.CoverImage != null) place.CoverImage = dto.CoverImage;
+
+            // ✅ رفع الصورة الجديدة لو بعتها
+            if (dto.CoverImage != null)
+                place.CoverImage = await _imageService.UploadImageAsync(dto.CoverImage);
 
             if (dto.CategoryId.HasValue)
             {
@@ -151,7 +154,6 @@ namespace Project.Core.Services
                 place.CategoryId = dto.CategoryId.Value;
             }
 
-            // تحديث Tags لو بعتها
             if (dto.TagIds != null)
             {
                 place.PlaceTags.Clear();
@@ -163,7 +165,6 @@ namespace Project.Core.Services
                 }
             }
 
-            // تحديث OpeningHours لو بعتها
             if (dto.OpeningHours != null)
             {
                 place.OpeningHours.Clear();

@@ -58,19 +58,31 @@ namespace Project.Core.Services
             // 2. Save to SQL
             var addedPost = await _postRepository.AddPostAsync(postEntity);
 
-            // 3. 🔥 Hangfire Background Job 🔥 (بدل الجروب القديم)
+            // 3. 🔥 Dual Strategy: SignalR + Hangfire 🔥
             string title = $"تحديث جديد من {place.Name} 🍔";
-            // لو البوست طويل جداً ممكن نقصره في الإشعار عشان شكله ميبقاش بايخ
             string msg = dto.Content.Length > 50 ? dto.Content.Substring(0, 50) + "..." : dto.Content;
 
+            // 3A. ⚡ SignalR: إشعار فوري للمستخدمين المتصلين الآن
+            // (هيظهر فوراً في التطبيق للـ followers اللي موصلين)
+            await _notifier.NotifyFollowersRealtimeAsync(
+                dto.PlaceId,
+                title,
+                msg,
+                addedPost.Id.ToString(),
+                ReferenceType.Post.ToString(),
+                NotificationType.PostAlert.ToString()
+            );
+
+            // 3B. 🔄 Hangfire: حفظ الإشعار في قاعدة البيانات
+            // (للـ followers اللي offline حالياً ولما يدخلوا هيشوفوا الإشعارات القديمة)
             _backgroundJobClient.Enqueue<INotificationService>(service =>
                 service.NotifyFollowersBackgroundJobAsync(
                     dto.PlaceId,
                     title,
                     msg,
                     addedPost.Id.ToString(),
-                    ReferenceType.Post.ToString(),// 👈 حددنا إنه بوست
-                    NotificationType.PostAlert.ToString() // 👈 حددنا نوع الإشعار
+                    ReferenceType.Post.ToString(),
+                    NotificationType.PostAlert.ToString()
                 )
             );
 
@@ -206,6 +218,18 @@ namespace Project.Core.Services
 
             // 5. حول لـ DTO وارجع
             return _mapper.Map<CeratePostComment.CommentResponseDto>(reply);
+        }
+
+        /// <summary>
+        /// جيب بوست واحد بـ ID
+        /// </summary>
+        public async Task<PostResponseDto?> GetPostByIdAsync(Guid postId)
+        {
+            var post = await _postRepository.GetPostByIdAsync(postId);
+            if (post == null)
+                return null;
+
+            return _mapper.Map<PostResponseDto>(post);
         }
     }
 }

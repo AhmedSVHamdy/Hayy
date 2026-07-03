@@ -136,5 +136,17 @@ namespace Project.Core.Services
             // 3. نحفظ التعديلات دي كلها في الداتابيز خبطة واحدة
             await _offerRepository.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// جيب عرض واحد بـ ID
+        /// </summary>
+        public async Task<OfferResponseDto?> GetOfferByIdAsync(Guid offerId)
+        {
+            var offer = await _offerRepository.GetByIdAsync(offerId);
+            if (offer == null)
+                return null;
+
+            return _mapper.Map<OfferResponseDto>(offer);
+        }
     }
 }

@@ -94,6 +94,30 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
+        /// Gets a specific business post by its ID.
+        /// </summary>
+        /// <param name="postId">The unique identifier of the post to retrieve.</param>
+        /// <returns>An <see cref="IActionResult"/> containing the post details if found; otherwise, a 404 Not Found response.</returns>
+        [HttpGet("post/{postId}")] // GET: api/BusinessPosts/post/{postId}
+        [Authorize]
+        public async Task<IActionResult> GetPostById(Guid postId)
+        {
+            try
+            {
+                var post = await _postService.GetPostByIdAsync(postId);
+
+                if (post == null)
+                    return NotFound(new { message = "البوست غير موجود" });
+
+                return Ok(post);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Updates an existing post with new data provided by the business user.
         /// </summary>
         /// <remarks>This action requires the caller to be authenticated as a user in the 'Business' role.

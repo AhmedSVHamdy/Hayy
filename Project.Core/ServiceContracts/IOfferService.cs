@@ -13,5 +13,8 @@ namespace Project.Core.ServiceContracts
         Task<bool> DeleteOfferAsync(Guid id);
         Task ExpireFinishedOffersAsync();
         Task<IEnumerable<OfferResponseDto>> GetActiveOffersAsync();
+
+        // 🆕 جديد: جيب عرض واحد بـ ID
+        Task<OfferResponseDto?> GetOfferByIdAsync(Guid offerId);
     }
 }

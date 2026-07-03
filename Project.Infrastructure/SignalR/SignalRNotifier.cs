@@ -47,5 +47,33 @@ namespace Project.Infrastructure.SignalR
                 Timestamp = DateTime.UtcNow
             });
         }
+
+        /// <summary>
+        /// إرسال إشعار فوري (Real-time) للـ followers عن طريق SignalR
+        /// </summary>
+        public async Task NotifyFollowersRealtimeAsync(
+            Guid placeId,
+            string title,
+            string message,
+            string referenceId,
+            string referenceType,
+            string notificationType)
+        {
+            // إنشاء الإشعار
+            var notification = new
+            {
+                Title = title,
+                Message = message,
+                ReferenceId = referenceId,
+                ReferenceType = referenceType,
+                NotificationType = notificationType,
+                Timestamp = DateTime.UtcNow
+            };
+
+            // إرسال للـ followers الموصلين حالياً عبر جروب المكان
+            string groupName = $"Place_{placeId}_Followers";
+            await _hubContext.Clients.Group(groupName)
+                .SendAsync("ReceiveNotification", notification);
+        }
     }
 }

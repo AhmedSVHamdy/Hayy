@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using Microsoft.AspNetCore.Http;
 
 namespace Project.Core.DTO.Places
 {
@@ -10,13 +10,14 @@ namespace Project.Core.DTO.Places
         public string? Description { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
-        public string? CoverImage { get; set; }
+
+        // ✅ بقت File مش String
+        public IFormFile? CoverImage { get; set; }
+
         public Guid? CategoryId { get; set; }
 
-        // لو مش عايز تعدل التاجز، ابعت null — لو عايز تمسحهم كلهم ابعت قائمة فاضية
         public List<Guid>? TagIds { get; set; }
 
-        // لو مش عايز تعدل المواعيد، ابعت null — لو عايز تمسحهم كلهم ابعت قائمة فاضية
         public List<OpeningHourDto>? OpeningHours { get; set; }
     }
 }

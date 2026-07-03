@@ -12,5 +12,14 @@ namespace Project.Core.ServiceContracts
         Task SendNotificationToGroup(string groupName, string message);
         Task SendNotificationToUser(string groupName, string message);
         Task SendNotificationToUserWaitlist(string userId, string message);
+
+        // 🆕 إرسال إشعار فوري (Real-time) للـ followers
+        Task NotifyFollowersRealtimeAsync(
+            Guid placeId,
+            string title,
+            string message,
+            string referenceId,
+            string referenceType,
+            string notificationType);
     }
 }
