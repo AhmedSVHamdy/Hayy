@@ -19,9 +19,9 @@ namespace Project.Core.Validators
                 .MaximumLength(2000).WithMessage("البوست طويل جداً! خف شوية 😅");
 
             // 3. ⚠️ القاعدة الذهبية: يا إما في كلام، يا إما في صورة (أو الاتنين)
-            // مينفعش الاتنين يكونوا فاضيين
+            // التعديل هنا: استخدمنا ImageFile بدل PostAttachments
             RuleFor(x => x)
-                .Must(x => !string.IsNullOrWhiteSpace(x.Content) || !string.IsNullOrWhiteSpace(x.PostAttachments))
+                .Must(x => !string.IsNullOrWhiteSpace(x.Content) || (x.ImageFile != null && x.ImageFile.Length > 0))
                 .WithMessage("البوست لازم يكون فيه محتوى أو صورة على الأقل! 📝📸");
         }
     }

@@ -35,6 +35,10 @@ namespace Project.Infrastructure.Configuration
                    .IsRequired()
                    .HasColumnType("decimal(18,2)");
 
+            builder.Property(X => X.RowVersion)
+                   .IsRowVersion()
+                   .IsRequired();
+
             // العلاقات
             builder.HasOne(X => X.Place)
                    .WithMany(p => p.Events) // ✅ ظبطت

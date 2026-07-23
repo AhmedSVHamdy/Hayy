@@ -1,54 +1,60 @@
 
+using Microsoft.Extensions.Configuration;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
+using Project.Core.DTO;
 using Project.Core.ServiceContracts;
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
+using static Project.Core.DTO.RecommendedItemDto;
 
 namespace Project.Core.Services
 {
     public class RecommendationService : IRecommendationService
     {
-        private readonly IRecommendedItemRepository _recommendedItemRepository;
+        private readonly HttpClient _httpClient;
+        private readonly IConfiguration _configuration;
 
-        public RecommendationService(IRecommendedItemRepository recommendedItemRepository)
+        public RecommendationService(HttpClient httpClient, IConfiguration configuration)
         {
-            _recommendedItemRepository = recommendedItemRepository;
+            _httpClient = httpClient;
+            _configuration = configuration;
         }
 
         /// <summary>
-        /// جيب التوصيات من Repository لليوزر
+        /// جلب التوصيات من الـ AI API (Hugging Face)
         /// </summary>
-        public async Task<IEnumerable<RecommendedItem>> GetUserRecommendationsAsync(Guid userId)
+        public async Task<IEnumerable<RecommendedItemDto>> GetUserRecommendationsAsync(Guid userId)
         {
-            return await _recommendedItemRepository.GetRecommendationsByUserIdAsync(userId);
-        }
+            // 1. قراءة رابط الـ API من الإعدادات
+            var baseUrl = _configuration["AiSettings:BaseUrl"];
 
-        /// <summary>
-        /// أضف توصية جديدة
-        /// </summary>
-        public async Task AddRecommendationAsync(RecommendedItem recommendation)
-        {
-            if (recommendation == null)
-                throw new ArgumentNullException(nameof(recommendation));
+            // لو الرابط مش موجود في الـ appsettings
+            if (string.IsNullOrEmpty(baseUrl))
+                throw new Exception("AI BaseUrl is missing in appsettings.json");
 
-            if (recommendation.Score < 0 || recommendation.Score > 1)
-                throw new ArgumentException("Score must be between 0 and 1");
+            var url = $"{baseUrl}/recommendations/{userId}";
 
-            await _recommendedItemRepository.CreateAsync(recommendation);
-        }
+            // 2. إرسال الطلب لبايثون
+            var response = await _httpClient.GetAsync(url);
 
-        /// <summary>
-        /// حذف توصية
-        /// </summary>
-        public async Task DeleteRecommendationAsync(Guid recommendationId)
-        {
-            if (string.IsNullOrEmpty(recommendationId.ToString()))
-                throw new ArgumentException("Recommendation ID is required");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
 
-            // تحتاج تضيف دالة Delete في الـ Repository إذا ما كانت موجودة
-            // await _recommendedItemRepository.DeleteAsync(recommendationId.ToString());
+                // 3. تحويل الـ JSON اللي راجع لكائنات C#
+                var result = JsonSerializer.Deserialize<AiRecommendationResponse>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return result?.Data ?? new List<RecommendedItemDto>();
+            }
+
+            // لو حصل مشكلة في الاتصال يرجع لستة فاضية
+            return new List<RecommendedItemDto>();
         }
     }
 }

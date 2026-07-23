@@ -20,8 +20,7 @@ namespace Project.Core.Domain.Entities
         public int WaitlistLimit { get; set; } // أقصى عدد يدخل قائمة الانتظار
 
         // 🛡️ حماية ضد الـ Race Condition (Optimistic Concurrency)
-        [Timestamp]
-        public byte[] RowVersion { get; set; } = null!;
+        public byte[] RowVersion { get; set; } 
 
         public Place Place { get; set; } = null!;
         public ICollection<EventBooking> EventBookings { get; set; } = new List<EventBooking>();

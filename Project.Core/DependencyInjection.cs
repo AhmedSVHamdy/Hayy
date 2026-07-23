@@ -60,6 +60,7 @@ namespace Project.Core
             services.AddScoped<IRecommendationService, RecommendationService>();
             services.AddScoped<RecommendationSyncJob>();
             services.Configure<PaymobEventSettings>(configuration.GetSection("PaymobEventSettings"));
+            services.AddHttpClient<IRecommendationService, RecommendationService>();
 
             services.AddScoped<IAdminService, AdminService>();
             // تسجيل خدمة الدفع (PaymentService)

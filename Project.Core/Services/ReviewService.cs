@@ -24,6 +24,7 @@ namespace Project.Core.Services
         private readonly IPlaceRepository _placeRepo;         // Place (عشان نحدث التقييم)
         private readonly IUserInterestRepository _interestRepository;
         private readonly IBusinessRepository _businessRepo;   // ✅ 1. مسؤول الـ Analytics
+        private readonly IImageService _imageService;         // 👈 1. ضفنا سيرفس الصور
 
         public ReviewService(
             IReviewRepository reviewRepository,
@@ -32,7 +33,8 @@ namespace Project.Core.Services
             INotifier notifier,
             IPlaceRepository placeRepo,
             IUserInterestRepository interestRepository,
-            IBusinessRepository businessRepo) // ✅ حقن الريبوزيتوري هنا
+            IBusinessRepository businessRepo,
+            IImageService imageService) // 👈 2. عملنالها حقن هنا
         {
             _reviewRepository = reviewRepository;
             _userLogService = userLogService;
@@ -41,6 +43,7 @@ namespace Project.Core.Services
             _placeRepo = placeRepo;
             _interestRepository = interestRepository;
             _businessRepo = businessRepo;
+            _imageService = imageService; // 👈 3. ربطناها
         }
 
         public async Task<ReviewResponseDto> AddReviewAsync(CreateReviewDto createReviewDto)
@@ -61,6 +64,12 @@ namespace Project.Core.Services
 
             // 1️⃣ Mapping
             var reviewEntity = _mapper.Map<Review>(createReviewDto);
+
+            // 👈 4. رفع الصورة لو اليوزر بعت صورة مع التقييم
+            if (createReviewDto.ImageFile != null && createReviewDto.ImageFile.Length > 0)
+            {
+                reviewEntity.ReviewImages = await _imageService.UploadImageAsync(createReviewDto.ImageFile);
+            }
 
             // 2️⃣ SQL: الحفظ في قاعدة البيانات الأساسية
             var addedReview = await _reviewRepository.AddReviewAsync(reviewEntity);
@@ -128,7 +137,12 @@ namespace Project.Core.Services
             // 3. تحديث البيانات
             review.Rating = dto.Rating;
             review.Comment = dto.Comment;
-            review.ReviewImages = dto.ReviewImages;
+
+            // 👈 5. تحديث الصورة لو رفع صورة جديدة
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+            {
+                review.ReviewImages = await _imageService.UploadImageAsync(dto.ImageFile);
+            }
 
             // 4. الحفظ في الداتابيز
             await _reviewRepository.UpdateAsync(review);
@@ -144,7 +158,6 @@ namespace Project.Core.Services
             // 6. إرجاع النتيجة
             return _mapper.Map<ReviewResponseDto>(review);
         }
-
 
         // =========================================================
         // جلب تقييمات مستخدم معين (Pagination)

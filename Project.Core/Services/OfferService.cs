@@ -6,6 +6,7 @@ using Project.Core.Enums;
 using Project.Core.ServiceContracts;
 using System;
 using System.Collections.Generic;
+using System.Linq; // عشان الـ First() تشتغل لو مش موجوده عندك
 using System.Text;
 using static Project.Core.DTO.CreateOfferDTO;
 using Hangfire;
@@ -19,7 +20,8 @@ namespace Project.Core.Services
         private readonly IMapper _mapper;
         private readonly IValidator<CreateOfferDto> _validator;
         private readonly INotifier _notifier; // SignalR
-        private readonly IBackgroundJobClient _backgroundJobClient; // 👈 هنضيف الباشا ده
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IImageService _imageService; // 👈 1. ضفنا سيرفس الصور
 
         public OfferService(
             IOfferRepository offerRepository,
@@ -27,14 +29,16 @@ namespace Project.Core.Services
             IMapper mapper,
             IValidator<CreateOfferDto> validator,
             INotifier notifier,
-            IBackgroundJobClient backgroundJobClient) // 👈 هنا
+            IBackgroundJobClient backgroundJobClient,
+            IImageService imageService) // 👈 2. عملنالها حقن هنا
         {
             _offerRepository = offerRepository;
             _placeRepository = placeRepository;
             _mapper = mapper;
             _validator = validator;
             _notifier = notifier;
-            _backgroundJobClient = backgroundJobClient; // 👈 وهنا
+            _backgroundJobClient = backgroundJobClient;
+            _imageService = imageService; // 👈 3. ربطناها
         }
 
         public async Task<OfferResponseDto> CreateOfferAsync(CreateOfferDto dto)
@@ -45,12 +49,19 @@ namespace Project.Core.Services
                 throw new ArgumentException(validationResult.Errors.First().ErrorMessage);
 
             // 2. هل المكان موجود ومفعل؟
-            var place = await _placeRepository.GetByIdAsync(dto.PlaceId); // افتراض إن الدالة دي عندك
+            var place = await _placeRepository.GetByIdAsync(dto.PlaceId);
             if (place == null || !place.IsActive)
                 throw new InvalidOperationException("عذراً، هذا المكان غير موجود أو غير مفعل.");
 
             // 3. Mapping & Save
             var offerEntity = _mapper.Map<Offer>(dto);
+
+            // 👈 4. رفع الصورة وحفظ اللينك
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+            {
+                offerEntity.GalleryImages = await _imageService.UploadImageAsync(dto.ImageFile);
+            }
+
             await _offerRepository.AddAsync(offerEntity);
             await _offerRepository.SaveChangesAsync();
 
@@ -58,15 +69,14 @@ namespace Project.Core.Services
             string title = $"عرض جديد من {place.Name}! 🎉";
             string msg = $"استمتع بخصم {dto.Discount}% على {dto.Title}";
 
-            // نطلب من Hangfire يشغل الدالة دي في الخلفية فوراً ويرجع الخط يكمل الكود
-            _backgroundJobClient.Enqueue<INotificationService>(service => 
+            _backgroundJobClient.Enqueue<INotificationService>(service =>
                 service.NotifyFollowersBackgroundJobAsync(
-                    dto.PlaceId, 
-                    title, 
-                    msg, 
-                    offerEntity.Id.ToString(), 
+                    dto.PlaceId,
+                    title,
+                    msg,
+                    offerEntity.Id.ToString(),
                     ReferenceType.Offer.ToString(),
-                    NotificationType.OfferAlert.ToString() // 👈 حددنا نوع الإشعار
+                    NotificationType.OfferAlert.ToString()
                 )
             );
 
@@ -84,6 +94,7 @@ namespace Project.Core.Services
             var offers = await _offerRepository.GetOffersByPlaceIdAsync(placeId);
             return _mapper.Map<IEnumerable<OfferResponseDto>>(offers);
         }
+
         public async Task<OfferResponseDto> UpdateOfferAsync(Guid id, UpdateOfferDto dto)
         {
             // 1. التأكد إن العرض موجود أصلاً
@@ -91,10 +102,14 @@ namespace Project.Core.Services
             if (existingOffer == null)
                 throw new KeyNotFoundException("عذراً، هذا العرض غير موجود.");
 
-            // (ممكن هنا كمان تتأكد إن اليوزر اللي بيعدل هو صاحب المكان زي ما اتكلمنا قبل كده)
-
-            // 2. تحديث البيانات (AutoMapper بيقوم بالواجب بياخد الداتا الجديدة يحطها في القديمة)
+            // 2. تحديث البيانات (AutoMapper بيقوم بالواجب)
             _mapper.Map(dto, existingOffer);
+
+            // 👈 5. رفع الصورة الجديدة وتحديث اللينك لو الموبايل/الويب بعت صورة جديدة
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+            {
+                existingOffer.GalleryImages = await _imageService.UploadImageAsync(dto.ImageFile);
+            }
 
             // 3. الحفظ في الداتابيز
             await _offerRepository.UpdateAsync(existingOffer);
@@ -117,6 +132,7 @@ namespace Project.Core.Services
 
             return true;
         }
+
         public async Task ExpireFinishedOffersAsync()
         {
             // 1. نجيب كل العروض اللي وقتها خلص
@@ -129,7 +145,7 @@ namespace Project.Core.Services
             // 2. نلف عليهم واحد واحد ونغير حالتهم
             foreach (var offer in expiredOffers)
             {
-                offer.Status = OfferStatus.Expired; // تأكد إنك ضايف Expired في الـ Enum بتاع OfferStatus
+                offer.Status = OfferStatus.Expired;
                 await _offerRepository.UpdateAsync(offer);
             }
 

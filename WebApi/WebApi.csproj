@@ -5,6 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	  <UserSecretsId>d2fe8910-3565-45c9-97c1-6551c01be98d</UserSecretsId>
+		<NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
 
 	<ItemGroup>

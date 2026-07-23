@@ -42,6 +42,7 @@ namespace Project.Infrastructure.Configuration
                    .HasMaxLength(100)
                    .IsRequired();
 
+            
             // ==========================================
             // Relationships Configuration (العلاقات الصح بس)
             // ==========================================

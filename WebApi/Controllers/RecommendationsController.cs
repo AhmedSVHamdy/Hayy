@@ -28,31 +28,45 @@ namespace WebApi.Controllers
         /// <param name="userId">The unique identifier of the user for whom to retrieve recommendations. Must not be an empty GUID.</param>
         /// <returns>An IActionResult containing the user's recommendations if found; otherwise, a BadRequest result if the user
         /// ID is invalid or an error occurs.</returns>
-        [HttpGet("{userId}")]
-        [Authorize(Roles = "User")]
+        //[HttpGet("{userId}")]
+        //[Authorize(Roles = "User")]
+        //public async Task<IActionResult> GetRecommendations(Guid userId)
+        //{
+        //    try
+        //    {
+        //        if (userId == Guid.Empty)
+        //            return BadRequest("Invalid user ID");
+
+        //        // اجيب التوصيات من MongoDB لـ User المحدد
+        //        var recommendations = await _recommendationService.GetUserRecommendationsAsync(userId);
+        //        var recList = recommendations.ToList();
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            userId = userId,
+        //            data = recList,
+        //            count = recList.Count
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new { success = false, message = ex.Message });
+        //    }
+        //}
+
+        [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetRecommendations(Guid userId)
         {
-            try
-            {
-                if (userId == Guid.Empty)
-                    return BadRequest("Invalid user ID");
+            // الكنترولر بيكلم السيرفس عادي جداً، وميعرفش إن السيرفس بتكلم بايثون في الخلفية!
+            var recommendations = await _recommendationService.GetUserRecommendationsAsync(userId);
 
-                // اجيب التوصيات من MongoDB لـ User المحدد
-                var recommendations = await _recommendationService.GetUserRecommendationsAsync(userId);
-                var recList = recommendations.ToList();
-
-                return Ok(new
-                {
-                    success = true,
-                    userId = userId,
-                    data = recList,
-                    count = recList.Count
-                });
-            }
-            catch (Exception ex)
+            if (recommendations == null || !recommendations.Any())
             {
-                return BadRequest(new { success = false, message = ex.Message });
+                return NotFound(new { message = "No recommendations found for this user." });
             }
+
+            return Ok(recommendations);
         }
     }
 }

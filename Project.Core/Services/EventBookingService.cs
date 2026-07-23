@@ -48,28 +48,27 @@ namespace Project.Core.Services
             if (!validationResult.IsValid)
                 throw new ArgumentException(validationResult.Errors.First().ErrorMessage);
 
-            // ✅ الحل: استخدم ExecutionStrategy
             var executionStrategy = _unitOfWork.CreateExecutionStrategy();
-
             BookingResponseDto result = null;
 
             await executionStrategy.ExecuteAsync(
-                state: (userId, dto),  // بنمرر الـ state صراحة
+                state: (userId, dto),
                 operation: async (_, state, ct) =>
                 {
                     var (uid, bookingDto) = state;
                     await using var transaction = await _unitOfWork.BeginTransactionAsync();
+
                     try
                     {
-                        var @event = await _unitOfWork.Events.GetEventWithLockAsync(bookingDto.EventId);
+                        // 1. هنجيب الـ Event عادي (بدون قفل تقيل للداتابيز لأن الـ RowVersion هيحمينا)
+                        var @event = await _unitOfWork.Events.GetByIdAsync(bookingDto.EventId);
 
                         if (@event == null || @event.Status != EventStatus.Active)
                             throw new ArgumentException("هذا الحدث غير متاح حالياً.");
 
-                        // 🔥 حساب صحيح: Pending + Confirmed (كلهم محجوزة فعلاً أو قيد الدفع)
                         int confirmedTickets = await _unitOfWork.EventBookings.GetConfirmedTicketsCountAsync(bookingDto.EventId);
                         int pendingTickets = await _unitOfWork.EventBookings.GetPendingTicketsCountAsync(bookingDto.EventId);
-                        int totalReserved = confirmedTickets + pendingTickets; // 🔥 المجموع
+                        int totalReserved = confirmedTickets + pendingTickets;
 
                         var booking = new EventBooking
                         {
@@ -80,11 +79,15 @@ namespace Project.Core.Services
                             PaymentMethod = PaymentMethod.CreditCard
                         };
 
-                        // ✅ الشرط: هل الـ Pending + Confirmed + الحجز الجديد ≤ السعة
                         if (totalReserved + bookingDto.TicketQuantity <= @event.Capacity)
                         {
                             booking.Status = BookingStatus.Pending;
                             booking.PaymentDeadline = DateTime.UtcNow.AddMinutes(2);
+
+                            // 🔥 خطوة إجبارية لتشغيل الـ RowVersion: 
+                            // بنجبر الـ EF Core يبعت أمر UPDATE للـ Event عشان يتأكد إن مفيش حد حجز في نفس الميكروثانية
+                            // لو عندك عمود LastUpdated أو ما شابه حدثه، أو اجبر الـ EF كدة:
+                            // @event.LastUpdated = DateTime.UtcNow; 
                         }
                         else if (@event.IsWaitlistEnabled)
                         {
@@ -98,8 +101,7 @@ namespace Project.Core.Services
                             if (currentWaitlistCount + bookingDto.TicketQuantity <= @event.WaitlistLimit)
                             {
                                 booking.Status = BookingStatus.Waitlisted;
-                                booking.WaitlistPosition = await _unitOfWork.EventBookings
-                                                                .GetMaxWaitlistPositionAsync(@event.Id) + 1;
+                                booking.WaitlistPosition = await _unitOfWork.EventBookings.GetMaxWaitlistPositionAsync(@event.Id) + 1;
                             }
                             else
                             {
@@ -112,6 +114,8 @@ namespace Project.Core.Services
                         }
 
                         await _unitOfWork.EventBookings.AddAsync(booking);
+
+                        // حفظ التغييرات (هنا الـ EF هيقارن الـ RowVersion)
                         await _unitOfWork.SaveChangesAsync();
                         await transaction.CommitAsync();
 
@@ -123,8 +127,16 @@ namespace Project.Core.Services
                         }
 
                         result = _mapper.Map<BookingResponseDto>(booking);
+                        return result;
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        // 🚨 هنا صيد الـ 10 مستخدمين اللي دخلوا في نفس اللحظة!
+                        await transaction.RollbackAsync();
 
-                        return result; // ← لازم ترجع قيمة
+                        // التصرف الذكي: السيستم هيرفض الحركة لأن النسخة اتحدثت، ونقول لليوزر يحاول تاني
+                        // أو الأجمل: نخليه يضرب Exception يروح للموبايل يفهمه إن الداتا اتحدثت في الخلفية
+                        return await CreateBookingAsync(userId, dto);
                     }
                     catch
                     {

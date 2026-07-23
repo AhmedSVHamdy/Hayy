@@ -17,7 +17,7 @@ namespace Project.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -187,7 +187,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("AdminId");
 
-                    b.ToTable("AdminActions");
+                    b.ToTable("AdminActions", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.Business", b =>
@@ -242,7 +242,7 @@ namespace Project.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Businesses");
+                    b.ToTable("Businesses", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.BusinessAnalytic", b =>
@@ -287,7 +287,7 @@ namespace Project.Infrastructure.Migrations
                     b.HasIndex("BusinessId")
                         .IsUnique();
 
-                    b.ToTable("BusinessAnalytics");
+                    b.ToTable("BusinessAnalytics", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.BusinessPlan", b =>
@@ -319,7 +319,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("PlanId");
 
-                    b.ToTable("BusinessPlans");
+                    b.ToTable("BusinessPlans", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.BusinessPost", b =>
@@ -435,7 +435,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("BusinessId");
 
-                    b.ToTable("BusinessVerifications");
+                    b.ToTable("BusinessVerifications", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.Category", b =>
@@ -455,7 +455,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.CategoryTag", b =>
@@ -531,7 +531,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("PlaceId");
 
-                    b.ToTable("Events");
+                    b.ToTable("Events", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.EventBooking", b =>
@@ -602,7 +602,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("UserId1");
 
-                    b.ToTable("EventBookings");
+                    b.ToTable("EventBookings", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.EventPayment", b =>
@@ -707,7 +707,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.Offer", b =>
@@ -751,7 +751,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("PlaceId");
 
-                    b.ToTable("Offers");
+                    b.ToTable("Offers", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.OpeningHour", b =>
@@ -834,7 +834,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("SubscriptionId");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.Place", b =>
@@ -917,7 +917,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Places");
+                    b.ToTable("Places", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.PlaceFollow", b =>
@@ -942,7 +942,7 @@ namespace Project.Infrastructure.Migrations
                     b.HasIndex("UserId", "PlaceId")
                         .IsUnique();
 
-                    b.ToTable("PlaceFollows");
+                    b.ToTable("PlaceFollows", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.PlaceTag", b =>
@@ -1121,7 +1121,7 @@ namespace Project.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SubscriptionPlans");
+                    b.ToTable("SubscriptionPlans", (string)null);
                 });
 
             modelBuilder.Entity("Project.Core.Domain.Entities.Tag", b =>

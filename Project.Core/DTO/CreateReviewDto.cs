@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.AspNetCore.Http; // 👈 ضفنا دي عشان الـ IFormFile
 
 namespace Project.Core.DTO
 {
@@ -11,7 +12,9 @@ namespace Project.Core.DTO
         public Guid UserId { get; set; }
         public int Rating { get; set; } // من 1 لـ 5
         public string? Comment { get; set; }
-        public string? ReviewImages { get; set; } // لينك الصورة أو Base64
+
+        // 👈 التعديل هنا: غيرناها لـ ImageFile من نوع IFormFile
+        public IFormFile? ImageFile { get; set; }
     }
 
     // شنطة العرض (Response)
@@ -30,6 +33,8 @@ namespace Project.Core.DTO
     {
         public int Rating { get; set; }
         public string Comment { get; set; } = string.Empty;
-        public string ReviewImages { get; set; } = string.Empty; // لو هيغير الصور
+
+        // 👈 التعديل هنا كمان
+        public IFormFile? ImageFile { get; set; }
     }
 }

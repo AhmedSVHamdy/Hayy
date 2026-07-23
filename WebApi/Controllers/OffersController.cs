@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Project.Core.ServiceContracts;
 using static Project.Core.DTO.CreateOfferDTO;
+using Microsoft.AspNetCore.Http;
 
 namespace WebApi.Controllers
 {
@@ -15,19 +16,15 @@ namespace WebApi.Controllers
         {
             _offerService = offerService;
         }
-
-        // 🔒 أصحاب الأماكن بس هما اللي يقدروا يعملوا عروض
         /// <summary>
-        /// Creates a new offer for the authenticated business.
+        /// Create a new offer. This endpoint is accessible only to users with the "Business" role.
         /// </summary>
-        /// <remarks>Only users with the 'Business' role are authorized to create offers using this
-        /// endpoint.</remarks>
-        /// <param name="dto">The data transfer object containing the details of the offer to create. Must not be null.</param>
-        /// <returns>An HTTP 201 Created response containing the created offer if successful; otherwise, an HTTP 400 Bad Request
-        /// response with error details.</returns>
+        /// <param name="dto">The offer data to be created.</param>
+        /// <returns>The created offer.</returns>
         [HttpPost]
         [Authorize(Roles = "Business")]
-        public async Task<IActionResult> CreateOffer([FromBody] CreateOfferDto dto)
+        // 👈 التعديل الوحيد هنا: FromForm بدل FromBody
+        public async Task<IActionResult> CreateOffer([FromForm] CreateOfferDto dto)
         {
             try
             {
@@ -39,14 +36,11 @@ namespace WebApi.Controllers
                 return BadRequest(new { Message = ex.Message });
             }
         }
-
-        // 🌍 مفتوحة لأي يوزر يشوف العروض
         /// <summary>
-        /// Retrieves all offers associated with the specified place identifier.
+        /// Get offers by place ID. This endpoint is accessible to all users.
         /// </summary>
-        /// <param name="placeId">The unique identifier of the place for which to retrieve offers.</param>
-        /// <returns>An <see cref="IActionResult"/> containing a collection of offers for the specified place. Returns an empty
-        /// collection if no offers are found.</returns>
+        /// <param name="placeId">The ID of the place to get offers for.</param>
+        /// <returns>A list of offers for the specified place.</returns>
         [HttpGet("place/{placeId}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetOffersByPlaceId(Guid placeId)
@@ -54,13 +48,11 @@ namespace WebApi.Controllers
             var offers = await _offerService.GetOffersByPlaceIdAsync(placeId);
             return Ok(offers);
         }
-
-        // 🌍 جديد: جيب عرض واحد بـ ID
         /// <summary>
-        /// Retrieves a specific offer by its unique identifier.
+        /// Get offer by ID. This endpoint is accessible to all users.
         /// </summary>
-        /// <param name="offerId">The unique identifier of the offer to retrieve.</param>
-        /// <returns>An <see cref="IActionResult"/> containing the offer details if found; otherwise, a 404 Not Found response.</returns>
+        /// <param name="offerId">The ID of the offer to get.</param>
+        /// <returns>The offer with the specified ID.</returns>
         [HttpGet("offer/{offerId}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetOfferById(Guid offerId)
@@ -79,21 +71,16 @@ namespace WebApi.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-        // 🔒 التعديل - لأصحاب الأماكن بس
         /// <summary>
-        /// Updates an existing offer with the specified identifier using the provided data.
+        /// Update an existing offer. This endpoint is accessible only to users with the "Business" role.
         /// </summary>
-        /// <remarks>This action is restricted to users with the "Business" role. The offer identifier in
-        /// the route must match the offer being updated.</remarks>
-        /// <param name="id">The unique identifier of the offer to update.</param>
-        /// <param name="dto">An object containing the updated offer details. The object's Id property is set to match the specified offer
-        /// identifier.</param>
-        /// <returns>An <see cref="IActionResult"/> that represents the result of the update operation. Returns 200 OK with the
-        /// updated offer if successful; 404 Not Found if the offer does not exist; or 400 Bad Request if the update
-        /// fails due to invalid input.</returns>
+        /// <param name="id">The ID of the offer to update.</param>
+        /// <param name="dto">The updated offer data.</param>
+        /// <returns>The updated offer.</returns>
         [HttpPut("{id}")]
         [Authorize(Roles = "Business")]
-        public async Task<IActionResult> UpdateOffer(Guid id, [FromBody] UpdateOfferDto dto)
+        // 👈 التعديل هنا كمان: FromForm بدل FromBody
+        public async Task<IActionResult> UpdateOffer(Guid id, [FromForm] UpdateOfferDto dto)
         {
             try
             {
@@ -111,17 +98,11 @@ namespace WebApi.Controllers
                 return BadRequest(new { Message = ex.Message });
             }
         }
-
-        // 🔒 الحذف - لأصحاب الأماكن بس
         /// <summary>
-        /// Deletes the offer with the specified identifier.
+        /// Delete an existing offer. This endpoint is accessible only to users with the "Business" role.
         /// </summary>
-        /// <remarks>This action is restricted to users with the "Business" role. Only authorized business
-        /// users can delete offers.</remarks>
-        /// <param name="id">The unique identifier of the offer to delete.</param>
-        /// <returns>An <see cref="IActionResult"/> indicating the result of the delete operation. Returns 204 No Content if the
-        /// offer was successfully deleted; 404 Not Found if the offer does not exist; or 400 Bad Request for other
-        /// errors.</returns>
+        /// <param name="id">The ID of the offer to delete.</param>
+        /// <returns>No content if the deletion is successful.</returns>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Business")]
         public async Task<IActionResult> DeleteOffer(Guid id)
@@ -129,7 +110,7 @@ namespace WebApi.Controllers
             try
             {
                 await _offerService.DeleteOfferAsync(id);
-                return NoContent(); // 204 No Content (الرد القياسي لنجاح الحذف)
+                return NoContent();
             }
             catch (KeyNotFoundException ex)
             {
@@ -141,12 +122,9 @@ namespace WebApi.Controllers
             }
         }
         /// <summary>
-        /// Retrieves a list of currently active offers available to users.
+        /// Get all active offers. This endpoint is accessible to all users.
         /// </summary>
-        /// <remarks>This method is accessible without authentication, allowing any user to view the
-        /// active offers.</remarks>
-        /// <returns>An IActionResult containing a list of active offers. The list will be empty if no offers are currently
-        /// active.</returns>
+        /// <returns>A list of all active offers.</returns>
         [HttpGet("active")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -167,7 +145,6 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                // التقاط أي أخطاء غير متوقعة وإرجاعها بشكل احترافي مثل باقي الـ Endpoints
                 return BadRequest(new { Message = ex.Message });
             }
         }

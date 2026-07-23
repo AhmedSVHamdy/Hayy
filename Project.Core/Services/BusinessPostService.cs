@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Hangfire;
 using Project.Core.Domain.Entities;
 using Project.Core.Domain.RepositoryContracts;
 using Project.Core.DTO;
@@ -8,38 +9,40 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using static Project.Core.DTO.CerateBusinessPostDto;
-using Hangfire; // 👈 1. ضيفنا النيم سبيس ده
+using static Project.Core.DTO.CeratePostComment; // 👈 السطر ده اللي حل مشكلة الـ Interface
 
-namespace Project.Core.Services     
+namespace Project.Core.Services
 {
     public class BusinessPostService : IBusinessPostService
     {
         private readonly IBusinessPostRepository _postRepository;
-        private readonly IPostCommentRepository _commentRepository; // 👈 جديد
+        private readonly IPostCommentRepository _commentRepository;
         private readonly IMapper _mapper;
         private readonly INotifier _notifier;
         private readonly IPlaceRepository _placeRepository;
-        private readonly IBackgroundJobClient _backgroundJobClient; // 👈 2. الباشا بتاع Hangfire
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IImageService _imageService;
 
         public BusinessPostService(
             IBusinessPostRepository postRepository,
-            IPostCommentRepository commentRepository, // 👈 جديد
+            IPostCommentRepository commentRepository,
             IMapper mapper,
             INotifier notifier,
             IPlaceRepository placeRepository,
-            IBackgroundJobClient backgroundJobClient) // 👈 3. حقناه هنا
+            IBackgroundJobClient backgroundJobClient,
+            IImageService imageService)
         {
             _postRepository = postRepository;
-            _commentRepository = commentRepository; // 👈 جديد
+            _commentRepository = commentRepository;
             _mapper = mapper;
             _notifier = notifier;
             _placeRepository = placeRepository;
-            _backgroundJobClient = backgroundJobClient; // 👈 4. ربطناه
+            _backgroundJobClient = backgroundJobClient;
+            _imageService = imageService;
         }
 
         public async Task<PostResponseDto> CreatePostAsync(CreatePostDto dto)
         {
-            // 🛑 Business Validation 1: هل المكان موجود؟
             var place = await _placeRepository.GetByIdWithDetailsAsync(dto.PlaceId);
 
             if (place == null)
@@ -52,18 +55,20 @@ namespace Project.Core.Services
                 throw new InvalidOperationException("هذا المكان غير مفعل حالياً ولا يمكنه النشر.");
             }
 
-            // 1. Mapping
             var postEntity = _mapper.Map<BusinessPost>(dto);
 
-            // 2. Save to SQL
+            // رفع الصورة لو الموبايل/الويب بعت ملف
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+            {
+                postEntity.PostAttachments = await _imageService.UploadImageAsync(dto.ImageFile);
+            }
+
             var addedPost = await _postRepository.AddPostAsync(postEntity);
 
-            // 3. 🔥 Dual Strategy: SignalR + Hangfire 🔥
             string title = $"تحديث جديد من {place.Name} 🍔";
             string msg = dto.Content.Length > 50 ? dto.Content.Substring(0, 50) + "..." : dto.Content;
 
-            // 3A. ⚡ SignalR: إشعار فوري للمستخدمين المتصلين الآن
-            // (هيظهر فوراً في التطبيق للـ followers اللي موصلين)
+            // SignalR Notification
             await _notifier.NotifyFollowersRealtimeAsync(
                 dto.PlaceId,
                 title,
@@ -73,8 +78,7 @@ namespace Project.Core.Services
                 NotificationType.PostAlert.ToString()
             );
 
-            // 3B. 🔄 Hangfire: حفظ الإشعار في قاعدة البيانات
-            // (للـ followers اللي offline حالياً ولما يدخلوا هيشوفوا الإشعارات القديمة)
+            // Hangfire Background Job
             _backgroundJobClient.Enqueue<INotificationService>(service =>
                 service.NotifyFollowersBackgroundJobAsync(
                     dto.PlaceId,
@@ -86,7 +90,6 @@ namespace Project.Core.Services
                 )
             );
 
-            // 4. Return
             return _mapper.Map<PostResponseDto>(addedPost);
         }
 
@@ -99,130 +102,109 @@ namespace Project.Core.Services
         public async Task<PagedResult<PostResponseDto>> GetPostsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize)
         {
             if (pageNumber <= 0) pageNumber = 1;
-            if (pageSize <= 0) pageSize = 10;
+            if (pageSize <= 0) pageSize = 50;
+            if (pageSize > 50) pageSize = 50;
 
-            // أ) هات الليستة من الريبو
             var posts = await _postRepository.GetPostsByPlaceIdPagedAsync(placeId, pageNumber, pageSize);
-
-            // ب) هات العدد الكلي من الريبو
             var totalCount = await _postRepository.GetCountByPlaceIdAsync(placeId);
-
-            // ج) حول لـ DTO
             var dtos = _mapper.Map<List<PostResponseDto>>(posts);
 
-            // د) غلفهم في PagedResult ورجعهم
             return new PagedResult<PostResponseDto>(dtos, totalCount, pageNumber, pageSize);
         }
 
         public async Task<PagedResult<PostResponseDto>> GetAllPostsPagedAsync(int pageNumber, int pageSize)
         {
             if (pageNumber <= 0) pageNumber = 1;
-            if (pageSize <= 0) pageSize = 10;
+            if (pageSize <= 0) pageSize = 50;
             if (pageSize > 50) pageSize = 50;
 
             var posts = await _postRepository.GetAllPostsPagedAsync(pageNumber, pageSize);
             var totalCount = await _postRepository.GetTotalCountAsync();
-
             var dtos = _mapper.Map<List<PostResponseDto>>(posts);
+
             return new PagedResult<PostResponseDto>(dtos, totalCount, pageNumber, pageSize);
         }
 
         public async Task<PostResponseDto> UpdatePostAsync(Guid postId, UpdatePostDto dto, Guid userId)
         {
-            // 1. هل البوست موجود أصلاً؟
             var post = await _postRepository.GetPostByIdAsync(postId);
             if (post == null)
             {
                 throw new KeyNotFoundException("عذراً، هذا المنشور غير موجود.");
             }
 
-            // 2. هل المكان موجود؟ وهل اليوزر ده هو صاحب المكان؟ (الأمان 🛡️)
             var place = await _placeRepository.GetByIdAsync(post.PlaceId);
             if (place == null)
             {
                 throw new KeyNotFoundException("عذراً، المكان المرتبط بهذا المنشور غير موجود.");
             }
 
-            // 3. التعديل
             post.Content = dto.Content;
-            // لو عندك خاصية UpdatedAt في الكلاس ضيفها:
-            // post.UpdatedAt = DateTime.UtcNow;
 
-            // 4. الحفظ في الداتابيز
+            // تحديث الصورة لو بعت صورة جديدة
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+            {
+                post.PostAttachments = await _imageService.UploadImageAsync(dto.ImageFile);
+            }
+
             await _postRepository.UpdateAsync(post);
-            // تأكد إن عندك دالة UpdateAsync أو إنك بتنادي SaveChangesAsync() في الريبو
 
-            // 5. إرجاع النتيجة
             return _mapper.Map<PostResponseDto>(post);
         }
 
         public async Task DeletePostAsync(Guid postId, Guid userId)
         {
-            // 1. هل البوست موجود؟
             var post = await _postRepository.GetPostByIdAsync(postId);
             if (post == null)
             {
                 throw new KeyNotFoundException("عذراً، هذا المنشور غير موجود مسبقاً.");
             }
 
-            // 2. هل اليوزر ده هو صاحب المكان؟ (الأمان 🛡️)
             var place = await _placeRepository.GetByIdAsync(post.PlaceId);
             if (place == null)
             {
                 throw new KeyNotFoundException("عذراً، المكان المرتبط بهذا المنشور غير موجود.");
             }
-            // 3. الحذف من الداتابيز
+
             await _postRepository.DeleteAsync(post);
-            // تأكد إنك بتعمل SaveChangesAsync جوه دالة الـ Delete في الريبو
         }
 
-        public async Task<IEnumerable<CeratePostComment.CommentResponseDto>> GetPostCommentsAsync(Guid postId)
+        // 👇 مطابقة للـ Interface بالمللي 👇
+
+        public async Task<IEnumerable<CommentResponseDto>> GetPostCommentsAsync(Guid postId)
         {
-            // 1. التحقق من وجود البوست
             var post = await _postRepository.GetPostByIdAsync(postId);
             if (post == null)
                 throw new ArgumentException("البوست غير موجود.");
 
-            // 2. جيب التعليقات الأساسية فقط (بدون ردود)
             var comments = await _commentRepository.GetCommentsByPostIdAsync(postId);
-
-            // 3. حول التعليقات لـ DTO مع الردود المتداخلة
-            return _mapper.Map<IEnumerable<CeratePostComment.CommentResponseDto>>(comments);
+            return _mapper.Map<IEnumerable<CommentResponseDto>>(comments);
         }
 
-        public async Task<CeratePostComment.CommentResponseDto> ReplyToCommentAsync(CeratePostComment.ReplyCommentDto dto)
+        public async Task<CommentResponseDto> ReplyToCommentAsync(ReplyCommentDto dto)
         {
-            // 1. التحقق من وجود التعليق الأصلي
             var parentComment = await _commentRepository.GetCommentByIdAsync(dto.CommentId);
             if (parentComment == null)
                 throw new ArgumentException("التعليق المراد الرد عليه غير موجود.");
 
-            // 2. التحقق من وجود البوست
             var post = await _postRepository.GetPostByIdAsync(parentComment.PostId);
             if (post == null)
                 throw new ArgumentException("البوست غير موجود.");
 
-            // 3. إنشاء تعليق جديد (الرد)
             var reply = new PostComment
             {
                 Id = Guid.NewGuid(),
-                PostId = parentComment.PostId,  // نفس الـ Post
-                UserId = dto.UserId,            // البزنس هو اللي بيرد
-                ParentCommentId = dto.CommentId, // رد على التعليق ده
+                PostId = parentComment.PostId,
+                UserId = dto.UserId,
+                ParentCommentId = dto.CommentId,
                 Content = dto.Content,
                 CreatedAt = DateTime.UtcNow
             };
 
-            // 4. حفظ الرد
             await _commentRepository.AddCommentAsync(reply);
-
-            // 5. حول لـ DTO وارجع
-            return _mapper.Map<CeratePostComment.CommentResponseDto>(reply);
+            return _mapper.Map<CommentResponseDto>(reply);
         }
 
-        /// <summary>
-        /// جيب بوست واحد بـ ID
-        /// </summary>
         public async Task<PostResponseDto?> GetPostByIdAsync(Guid postId)
         {
             var post = await _postRepository.GetPostByIdAsync(postId);

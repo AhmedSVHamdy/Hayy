@@ -1,4 +1,5 @@
 ﻿using Project.Core.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace Project.Core.Domain.Entities
 {
@@ -17,6 +18,7 @@ namespace Project.Core.Domain.Entities
         public string TransactionId { get; set; } = string.Empty;
         // 💡 حقل جديد لترتيب الشخص في الطابور
         public int? WaitlistPosition { get; set; }
+
 
         // 💡 وقت انتهاء صلاحية الحجز لو مدفعش (عشان الـ Background Job)
         public DateTime? PaymentDeadline { get; set; }
