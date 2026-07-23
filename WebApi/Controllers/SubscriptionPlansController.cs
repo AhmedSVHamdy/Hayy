@@ -17,9 +17,10 @@ namespace WebApi.Controllers
             _service = service;
         }
 
-        // ===========================
-        // GET api/subscriptionplans
-        // ===========================
+        /// <summary>
+        /// Get all subscription plans
+        /// </summary>
+        /// <returns></returns>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -27,9 +28,11 @@ namespace WebApi.Controllers
             return Ok(plans);
         }
 
-        // ===========================
-        // GET api/subscriptionplans/{id}
-        // ===========================
+        /// <summary>
+        /// Get a subscription plan by its ID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -41,9 +44,11 @@ namespace WebApi.Controllers
             return Ok(plan);
         }
 
-        // ===========================
-        // POST api/subscriptionplans
-        // ===========================
+        /// <summary>
+        /// Add a new subscription plan
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddPlan([FromBody] AddSubscriptionPlanRequestDto dto)
@@ -59,9 +64,12 @@ namespace WebApi.Controllers
                 created
             );
         }
-        // ===========================
-        // PUT api/subscriptionplans/{id}
-        // ===========================
+        /// <summary>
+        /// Update an existing subscription plan
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
         [HttpPut("{id:guid}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdatePlan(Guid id, [FromBody] UpdateSubscriptionPlanRequestDto dto)
@@ -77,9 +85,11 @@ namespace WebApi.Controllers
             return Ok(updated);
         }
 
-        // ===========================
-        // DELETE api/subscriptionplans/{id}  → Soft Delete
-        // ===========================
+        /// <summary>
+        /// Delete a subscription plan (soft delete)
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpDelete("{id:guid}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePlan(Guid id)

@@ -162,13 +162,11 @@ namespace Project.Core.Services
         // =========================================================
         // جلب تقييمات مستخدم معين (Pagination)
         // =========================================================
->>>>>>> f5dbb6814e90fa833b1f53379108b44cb1dea255
         public async Task<PagedResult<ReviewResponseDto>> GetReviewsByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize)
         {
             if (pageNumber <= 0) pageNumber = 1;
             if (pageSize <= 0) pageSize = 10;
 
-<<<<<<< HEAD
             // أ) هات ريفيوهات اليوزر
             var reviews = await _reviewRepository.GetReviewsByUserIdPagedAsync(userId, pageNumber, pageSize);
 
@@ -179,17 +177,7 @@ namespace Project.Core.Services
             var dtos = _mapper.Map<List<ReviewResponseDto>>(reviews);
             return new PagedResult<ReviewResponseDto>(dtos, totalCount, pageNumber, pageSize);
         }
-=======
-            // جلب التقييمات الخاصة باليوزر من الـ Repository
-            var reviews = await _reviewRepository.GetReviewsByUserIdPagedAsync(userId, pageNumber, pageSize);
-
-            // جلب العدد الكلي لتقييمات هذا اليوزر
-            var totalCount = await _reviewRepository.GetCountByUserIdAsync(userId);
-
-            // التحويل للـ DTO وإرجاع النتيجة
-            var dtos = _mapper.Map<List<ReviewResponseDto>>(reviews);
-            return new PagedResult<ReviewResponseDto>(dtos, totalCount, pageNumber, pageSize);
-        }
+        
         public async Task<PagedResult<ReviewResponseDto>> GetReviewsByPlaceIdPagedAsync(Guid placeId, int pageNumber, int pageSize)
         {
             if (pageNumber <= 0) pageNumber = 1;
@@ -264,6 +252,5 @@ namespace Project.Core.Services
                 }
             }
         }
->>>>>>> f5dbb6814e90fa833b1f53379108b44cb1dea255
     }
 }

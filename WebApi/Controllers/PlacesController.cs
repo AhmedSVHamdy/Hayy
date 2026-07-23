@@ -22,8 +22,10 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// إنشاء مكان جديد — خاص بصاحب البيزنس فقط
+        /// Create a new place 
         /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
         [HttpPost]
         [Authorize(Roles = "Business")]
         [Consumes("multipart/form-data")] // ✅ عشان يقبل الصور
@@ -44,8 +46,10 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// جيب تفاصيل مكان بالـ ID
+        /// get place by id
         /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpGet("{id}")]
         [Authorize]
         public async Task<IActionResult> GetById(Guid id)
@@ -56,8 +60,9 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// جيب كل الأماكن — للمستخدمين العاديين فقط
+        /// Get all places 
         /// </summary>
+        /// <returns></returns>
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> GetAll()
@@ -67,8 +72,10 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// جيب الأماكن بالتصنيف
+        /// Get places by category id
         /// </summary>
+        /// <param name="categoryId"></param>
+        /// <returns></returns>
         [HttpGet("category/{categoryId}")]
         public async Task<IActionResult> GetPlacesByCategoryIdAsync(Guid categoryId)
         {
@@ -81,8 +88,9 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// جيب أماكن البيزنس اكونت اللي مسجل دخول — لصاحب البيزنس فقط
+        /// Get places for the authenticated business user
         /// </summary>
+        /// <returns></returns>
         [HttpGet("my-places")]
         [Authorize(Roles = "Business")]
         public async Task<IActionResult> GetMyPlaces()
@@ -96,8 +104,11 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// تعديل بيانات مكان — لصاحب المكان فقط
+        /// Update a place (only for the owner of the place)
         /// </summary>
+        /// <param name="id"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
         [HttpPut("{id}")]
         [Authorize(Roles = "Business")]
         [Consumes("multipart/form-data")] // ✅ عشان يقبل الصور
@@ -123,8 +134,10 @@ namespace WebApi.Controllers
         }
 
         /// <summary>
-        /// حذف مكان (Soft Delete) — لصاحب المكان فقط
+        /// Delete a place (only for the owner of the place)
         /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Business")]
         public async Task<IActionResult> Delete(Guid id)

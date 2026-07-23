@@ -27,7 +27,11 @@ namespace Project.Web.Controllers
             _businessService = businessService;
             _onboardingValidator = onboardingValidator;
         }
-
+        /// <summary>
+        /// Submits the onboarding details for a business. This endpoint is accessible only to users with the "Business" role.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
         [HttpPost("onboarding")]
         [Authorize(Roles = "Business")]
         [Consumes("multipart/form-data")]

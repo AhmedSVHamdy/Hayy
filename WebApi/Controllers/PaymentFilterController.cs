@@ -51,7 +51,11 @@ namespace WebApi.Controllers
             return Ok();
         
         }
-
+        /// <summary>
+        /// Handles the result of a payment process and returns an appropriate response based on the success or failure of the payment.
+        /// </summary>
+        /// <param name="success"></param>
+        /// <returns></returns>
         [HttpGet("payment-result")]
         public IActionResult PaymentResult([FromQuery] bool success)
         {
