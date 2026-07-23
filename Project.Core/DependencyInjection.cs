@@ -89,7 +89,11 @@ namespace Project.Core
             services.AddAutoMapper(cfg => cfg.AddProfile<SubscriptionPlanProfile>());
 
             // Services
+<<<<<<< HEAD
+            
+=======
 
+>>>>>>> f5dbb6814e90fa833b1f53379108b44cb1dea255
 
             return services;
         }

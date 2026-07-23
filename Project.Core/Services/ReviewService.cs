@@ -162,11 +162,24 @@ namespace Project.Core.Services
         // =========================================================
         // جلب تقييمات مستخدم معين (Pagination)
         // =========================================================
+>>>>>>> f5dbb6814e90fa833b1f53379108b44cb1dea255
         public async Task<PagedResult<ReviewResponseDto>> GetReviewsByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize)
         {
             if (pageNumber <= 0) pageNumber = 1;
             if (pageSize <= 0) pageSize = 10;
 
+<<<<<<< HEAD
+            // أ) هات ريفيوهات اليوزر
+            var reviews = await _reviewRepository.GetReviewsByUserIdPagedAsync(userId, pageNumber, pageSize);
+
+            // ب) هات العدد الكلي
+            var totalCount = await _reviewRepository.GetCountByUserIdAsync(userId);
+
+            // ج) التحويل والرد
+            var dtos = _mapper.Map<List<ReviewResponseDto>>(reviews);
+            return new PagedResult<ReviewResponseDto>(dtos, totalCount, pageNumber, pageSize);
+        }
+=======
             // جلب التقييمات الخاصة باليوزر من الـ Repository
             var reviews = await _reviewRepository.GetReviewsByUserIdPagedAsync(userId, pageNumber, pageSize);
 
@@ -251,5 +264,6 @@ namespace Project.Core.Services
                 }
             }
         }
+>>>>>>> f5dbb6814e90fa833b1f53379108b44cb1dea255
     }
 }
