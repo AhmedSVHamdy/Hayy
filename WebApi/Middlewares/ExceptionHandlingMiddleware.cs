@@ -25,30 +25,30 @@ namespace WebApi.Middlewares
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{ex.GetType().ToString()}: {ex.Message}");
-                if (ex.InnerException is not null)
-                {
-                    _logger.LogError($"{ex.InnerException.GetType().ToString()}: {ex.InnerException.Message}");
-                }
+                // ✅ الصح: مرر الـ ex كامل عشان الـ Logs في Azure تلقط الـ Stack Trace بالملي
+                _logger.LogError(ex, "حدث خطأ غير متوقع أثناء معالجة الطلب: {Message}", ex.Message);
 
-                // 👇 التعديل هنا: تحديد الكود حسب نوع الخطأ
                 var statusCode = ex switch
                 {
-                    KeyNotFoundException => (int)HttpStatusCode.NotFound,       // 404 (مش موجود)
-                    UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized, // 401 (غير مسموح)
-                    ArgumentException => (int)HttpStatusCode.BadRequest,        // 400 (بيانات غلط)
-                    _ => (int)HttpStatusCode.InternalServerError                // 500 (أي حاجة تانية)
+                    KeyNotFoundException => (int)HttpStatusCode.NotFound,
+                    UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
+                    ArgumentException => (int)HttpStatusCode.BadRequest,
+                    _ => (int)HttpStatusCode.InternalServerError
                 };
 
                 httpContext.Response.StatusCode = statusCode;
-                httpContext.Response.ContentType = "application/json"; // تأكيد نوع المحتوى
+                httpContext.Response.ContentType = "application/json";
 
-                // بنرجع رسالة الخطأ
+                // ✅ الحل الذكي: لو الخطأ 500 اخفي التفاصيل واظهر رسالة عامة، لو خطأ متوقع اظهر الرسالة الحقيقية
+                string clientMessage = statusCode == (int)HttpStatusCode.InternalServerError
+                    ? "حدث خطأ داخلي في السيرفر، يرجى المحاولة لاحقاً."
+                    : ex.Message;
+
                 await httpContext.Response.WriteAsJsonAsync(new
                 {
                     StatusCode = statusCode,
-                    Message = ex.Message,
-                    Type = ex.GetType().Name
+                    Message = clientMessage,
+                    Type = statusCode == (int)HttpStatusCode.InternalServerError ? "ServerError" : ex.GetType().Name
                 });
             }
         }
