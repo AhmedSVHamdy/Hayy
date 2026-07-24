@@ -74,4 +74,3 @@ We managed this cross-functional ecosystem using the **Agile/Scrum Framework**, 
 * **Task Scheduler:** Hangfire Dashboard
 * **Cloud Infrastructure:** Azure App Service, Azure SQL, GitHub Actions
 * **Logging:** Serilog Structured Logging.
-* ![System Architecture]()
